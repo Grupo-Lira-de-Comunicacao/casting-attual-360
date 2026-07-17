@@ -25,7 +25,7 @@ export type Package = {
 export const demoTalents: Talent[] = [
   {
     slug: 'maria-silva',
-    name: 'Marina Silva',
+    name: 'Maria Silva',
     role: 'Apresentadora e criadora de conteúdo',
     location: 'Caçapava, SP',
     specialty: 'Cultura, eventos e lifestyle',
