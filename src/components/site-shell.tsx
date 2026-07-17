@@ -45,7 +45,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             aria-expanded={menuOpen}
-            aria-label="Abrir menu"
+            aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
             onClick={() => setMenuOpen((current) => !current)}
             className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-white/5 text-xl lg:hidden"
           >
