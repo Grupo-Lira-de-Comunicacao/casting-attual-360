@@ -8,6 +8,7 @@ export type Talent = {
   availability: string;
   highlight: string;
   category: string;
+  image: string;
 };
 
 export type Package = {
@@ -32,6 +33,7 @@ export const demoTalents: Talent[] = [
     availability: 'Disponível para campanhas mensais',
     highlight: 'Top 1 de alcance regional',
     category: 'Apresentação',
+    image: '/talentos/maria-silva.png',
   },
   {
     slug: 'joao-pereira',
@@ -43,6 +45,7 @@ export const demoTalents: Talent[] = [
     availability: 'Aberto para projetos de curto prazo',
     highlight: 'Especialista em narrativa visual',
     category: 'Produção',
+    image: '/talentos/joao-pereira.png',
   },
   {
     slug: 'ana-lima',
@@ -54,6 +57,7 @@ export const demoTalents: Talent[] = [
     availability: 'Disponível para lançamentos e campanhas',
     highlight: 'Presença regional forte',
     category: 'Modelo',
+    image: '/talentos/ana-lima.png',
   },
 ];
 

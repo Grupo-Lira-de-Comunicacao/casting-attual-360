@@ -11,21 +11,21 @@ const navigation = [
 
 export function SiteShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-cream">
-      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
+    <div className="min-h-screen overflow-hidden bg-[#041628] text-white">
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#041628]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-navy via-blue to-teal text-lg font-black text-white">
-              C
+            <div className="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue via-teal to-gold text-lg font-black text-white shadow-[0_0_25px_rgba(25,199,197,0.3)]">
+              C<span className="text-[9px]">360</span>
             </div>
             <div>
-              <p className="text-base font-black text-navy">Casting Attual 360</p>
-              <p className="text-xs text-slate-500">Talentos, conexões e visibilidade.</p>
+              <p className="text-base font-black text-white">Casting Attual 360</p>
+              <p className="text-xs text-slate-400">Talentos, conexões e visibilidade.</p>
             </div>
           </Link>
-          <nav aria-label="Navegação principal" className="order-3 flex w-full gap-2 overflow-x-auto pb-1 text-sm font-semibold text-slate-700 md:order-none md:w-auto md:gap-5 md:pb-0">
+          <nav aria-label="Navegação principal" className="order-3 flex w-full gap-2 overflow-x-auto pb-1 text-sm font-semibold text-slate-300 md:order-none md:w-auto md:gap-5 md:pb-0">
             {navigation.map((item) => (
-              <Link key={item.href} href={item.href} className="whitespace-nowrap rounded-full px-2 py-1 transition hover:bg-slate-100 hover:text-blue md:px-0 md:hover:bg-transparent">
+              <Link key={item.href} href={item.href} className="whitespace-nowrap rounded-full px-2 py-1 transition hover:bg-white/10 hover:text-teal md:px-0 md:hover:bg-transparent">
                 {item.label}
               </Link>
             ))}
@@ -35,8 +35,8 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
 
       <main className="mx-auto max-w-7xl px-5 py-8 sm:px-6 sm:py-10 lg:px-8">{children}</main>
 
-      <footer className="border-t border-slate-200 bg-white/70">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-6 text-sm text-slate-600 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+      <footer className="border-t border-white/10 bg-[#03111f]">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-7 text-sm text-slate-400 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <p>© 2026 Casting Attual 360 — base demonstrativa preparada para Supabase.</p>
           <p>Identidade: premium, regional, tecnológica e ligada à comunicação.</p>
         </div>

@@ -1,25 +1,25 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Talent } from '@/data/demo-data';
 
 export function TalentCard({ talent }: { talent: Talent }) {
   return (
-    <article className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-soft">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-semibold text-blue">{talent.category}</p>
-          <h3 className="mt-2 text-xl font-bold text-navy">{talent.name}</h3>
-        </div>
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-teal to-gold text-sm font-black text-white">
-          {talent.name.charAt(0)}
+    <article className="group relative overflow-hidden rounded-[26px] border border-white/10 bg-[#0b2948] shadow-[0_22px_70px_-35px_rgba(25,199,197,0.7)] transition duration-300 hover:-translate-y-1 hover:border-teal/50">
+      <div className="relative aspect-[4/5] overflow-hidden">
+        <Image src={talent.image} alt={`Retrato demonstrativo de ${talent.name}`} fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover transition duration-500 group-hover:scale-[1.03]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#041628] via-[#041628]/10 to-transparent" />
+        <span className="absolute left-4 top-4 rounded-full border border-white/15 bg-navy/70 px-3 py-1 text-sm font-semibold text-teal backdrop-blur">{talent.category}</span>
+        <span className="absolute right-4 top-4 rounded-full bg-gold px-3 py-1 text-xs font-bold text-navy">DEMO</span>
+        <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6">
+          <h3 className="text-2xl font-black text-white">{talent.name}</h3>
+          <p className="mt-1 text-base text-white/75">{talent.location}</p>
         </div>
       </div>
-      <p className="mt-4 text-sm text-slate-600">{talent.role}</p>
-      <p className="mt-2 text-sm text-slate-500">{talent.location}</p>
-      <p className="mt-4 text-sm leading-7 text-slate-600">{talent.description}</p>
-      <div className="mt-6 flex items-center justify-between">
-        <span className="rounded-full bg-teal/10 px-3 py-1 text-xs font-semibold text-teal">{talent.highlight}</span>
-        <Link href={`/talentos/${talent.slug}`} className="text-sm font-semibold text-blue">
-          Ver perfil
+      <div className="p-5 sm:p-6">
+        <p className="font-semibold text-white">{talent.specialty}</p>
+        <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-300">{talent.description}</p>
+        <Link href={`/talentos/${talent.slug}`} className="mt-5 inline-flex items-center gap-2 font-semibold text-teal transition hover:text-white">
+          Ver perfil <span aria-hidden="true">→</span>
         </Link>
       </div>
     </article>
