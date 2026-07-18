@@ -1,12 +1,20 @@
--- Fase 5 — proposta de evolução administrativa (NÃO APLICADA AUTOMATICAMENTE)
--- Este arquivo documenta a mudança necessária no Supabase para permitir
--- atualização de status e, futuramente, observações e histórico.
--- Deve ser revisado e aprovado antes de execução no projeto Supabase.
+-- Fase 5 — política administrativa de atualização de status
+-- Aplicada manualmente no Supabase após aprovação.
+-- O acesso de UPDATE permanece restrito à coluna status e aos administradores autorizados.
 
--- 1. Permitir UPDATE apenas a usuários autenticados.
-grant update on table public.requests to authenticated;
+begin;
 
--- 2. Restringir UPDATE aos administradores autorizados pela função privada já existente.
+-- Remove qualquer permissão ampla de atualização.
+revoke update on table public.requests from authenticated;
+
+-- Permite alterar somente a coluna status.
+grant update (status) on table public.requests to authenticated;
+
+-- Restringe a operação aos administradores reconhecidos pela função privada existente.
+drop policy if exists
+  "Admins autorizados podem atualizar solicitacoes"
+on public.requests;
+
 create policy "Admins autorizados podem atualizar solicitacoes"
 on public.requests
 for update
@@ -14,7 +22,9 @@ to authenticated
 using ((select private.is_admin_request_viewer()))
 with check ((select private.is_admin_request_viewer()));
 
--- Próxima evolução sugerida, também sujeita a aprovação:
+commit;
+
+-- Evoluções futuras, ainda não aplicadas:
 -- - adicionar assigned_to, internal_notes e updated_at;
 -- - criar tabela de histórico administrativo;
 -- - registrar mudanças de status e responsável por trigger ou função segura.
