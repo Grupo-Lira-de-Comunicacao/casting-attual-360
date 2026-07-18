@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useTransition } from 'react';
+import { updateRequestStatus } from '@/app/admin/actions';
 import type { RequestRecord, RequestStatus, RequestType } from '@/types/request';
 
 const statusLabel: Record<RequestStatus, string> = {
@@ -27,15 +28,18 @@ type RequestManagementProps = {
 };
 
 export function RequestManagement({ requests }: RequestManagementProps) {
+  const [items, setItems] = useState(requests);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<RequestStatus | 'todos'>('todos');
   const [type, setType] = useState<RequestType | 'todos'>('todos');
   const [selectedId, setSelectedId] = useState<number | null>(requests[0]?.id ?? null);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const filteredRequests = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase('pt-BR');
 
-    return requests.filter((request) => {
+    return items.filter((request) => {
       const matchesStatus = status === 'todos' || request.status === status;
       const matchesType = type === 'todos' || request.request_type === type;
       const haystack = [request.name, request.email, request.organization, request.message]
@@ -45,7 +49,7 @@ export function RequestManagement({ requests }: RequestManagementProps) {
 
       return matchesStatus && matchesType && matchesQuery;
     });
-  }, [query, requests, status, type]);
+  }, [items, query, status, type]);
 
   const selectedRequest =
     filteredRequests.find((request) => request.id === selectedId) ?? filteredRequests[0] ?? null;
@@ -54,6 +58,24 @@ export function RequestManagement({ requests }: RequestManagementProps) {
     setQuery('');
     setStatus('todos');
     setType('todos');
+  }
+
+  function handleStatusChange(requestId: number, nextStatus: RequestStatus) {
+    setFeedback(null);
+
+    startTransition(async () => {
+      const result = await updateRequestStatus(requestId, nextStatus);
+
+      if (!result.ok) {
+        setFeedback({ type: 'error', message: result.error });
+        return;
+      }
+
+      setItems((current) =>
+        current.map((request) => (request.id === requestId ? { ...request, status: result.status } : request)),
+      );
+      setFeedback({ type: 'success', message: `Status alterado para ${statusLabel[result.status]}.` });
+    });
   }
 
   return (
@@ -65,7 +87,7 @@ export function RequestManagement({ requests }: RequestManagementProps) {
             <h2 className="text-2xl font-black">Fila administrativa</h2>
           </div>
           <span className="rounded-full bg-teal/15 px-3 py-1 text-sm font-semibold text-teal">
-            {filteredRequests.length} de {requests.length}
+            {filteredRequests.length} de {items.length}
           </span>
         </div>
 
@@ -134,7 +156,10 @@ export function RequestManagement({ requests }: RequestManagementProps) {
                 <button
                   key={request.id}
                   type="button"
-                  onClick={() => setSelectedId(request.id)}
+                  onClick={() => {
+                    setSelectedId(request.id);
+                    setFeedback(null);
+                  }}
                   className={`block w-full p-5 text-left transition ${active ? 'bg-blue/5' : 'hover:bg-slate-50'}`}
                 >
                   <div className="flex flex-wrap items-center gap-2">
@@ -174,7 +199,22 @@ export function RequestManagement({ requests }: RequestManagementProps) {
                 </div>
                 <div>
                   <dt className="font-bold text-slate-500">Status</dt>
-                  <dd className="mt-1 text-navy">{statusLabel[selectedRequest.status]}</dd>
+                  <dd className="mt-2">
+                    <select
+                      value={selectedRequest.status}
+                      disabled={isPending}
+                      onChange={(event) =>
+                        handleStatusChange(selectedRequest.id, event.target.value as RequestStatus)
+                      }
+                      className="w-full rounded-2xl border border-slate-200 px-4 py-3 font-semibold text-navy outline-none transition focus:border-blue focus:ring-2 focus:ring-blue/15 disabled:cursor-wait disabled:opacity-60"
+                    >
+                      {Object.entries(statusLabel).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </dd>
                 </div>
                 <div>
                   <dt className="font-bold text-slate-500">E-mail</dt>
@@ -194,13 +234,26 @@ export function RequestManagement({ requests }: RequestManagementProps) {
                 </div>
               </dl>
 
+              {feedback && (
+                <div
+                  role="status"
+                  className={`mt-5 rounded-2xl border p-4 text-sm font-semibold ${
+                    feedback.type === 'success'
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                      : 'border-red-200 bg-red-50 text-red-900'
+                  }`}
+                >
+                  {feedback.message}
+                </div>
+              )}
+
               <div className="mt-6 rounded-2xl bg-slate-50 p-5">
                 <p className="text-sm font-bold text-slate-500">Mensagem</p>
                 <p className="mt-3 whitespace-pre-wrap leading-7 text-slate-700">{selectedRequest.message}</p>
               </div>
 
-              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-                Alteração de status, responsável, observações internas e histórico serão liberados após aprovação da nova política de escrita administrativa no Supabase.
+              <div className="mt-5 rounded-2xl border border-blue/20 bg-blue/5 p-4 text-sm leading-6 text-slate-700">
+                O status pode ser atualizado por administradores autorizados. Responsável, observações internas e histórico continuam bloqueados até uma próxima evolução segura do banco.
               </div>
             </aside>
           )}
