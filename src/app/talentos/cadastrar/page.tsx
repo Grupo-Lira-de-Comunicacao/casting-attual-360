@@ -11,7 +11,11 @@ export default function TalentRegisterPage() {
           title="Cadastre seu perfil"
           description="Página inicial para talentos interessados em entrar na rede da Casting Attual 360."
         />
-        <ContactForm title="Quero participar da rede" description="Envie seus dados e destaque para que possamos avaliar sua presença para campanhas futuras." />
+        <ContactForm
+          title="Quero participar da rede"
+          description="Envie seus dados e destaque para que possamos avaliar sua presença para campanhas futuras."
+          requestType="talento"
+        />
       </div>
     </SiteShell>
   );
