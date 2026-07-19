@@ -59,10 +59,10 @@ function RequestEditor({ request, history, onSaved }: EditorProps) {
           <input value={draft.name} maxLength={120} onChange={(event) => setField('name', event.target.value)} className="rounded-2xl border border-slate-200 px-4 py-3 font-normal text-navy outline-none focus:border-blue" />
         </label>
         <label className="grid gap-1 text-sm font-bold text-slate-500">E-mail
-          <input type="email" value={draft.email} maxLength={254} onChange={(event) => setField('email', event.target.value)} className="rounded-2xl border border-slate-200 px-4 py-3 font-normal text-navy outline-none focus:border-blue" />
+          <input type="email" value={draft.email} maxLength={180} onChange={(event) => setField('email', event.target.value)} className="rounded-2xl border border-slate-200 px-4 py-3 font-normal text-navy outline-none focus:border-blue" />
         </label>
         <label className="grid gap-1 text-sm font-bold text-slate-500">Empresa ou identificação
-          <input value={draft.organization} maxLength={160} onChange={(event) => setField('organization', event.target.value)} className="rounded-2xl border border-slate-200 px-4 py-3 font-normal text-navy outline-none focus:border-blue" />
+          <input value={draft.organization} maxLength={180} onChange={(event) => setField('organization', event.target.value)} className="rounded-2xl border border-slate-200 px-4 py-3 font-normal text-navy outline-none focus:border-blue" />
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-1 text-sm font-bold text-slate-500">Tipo
