@@ -9,6 +9,7 @@ export type Talent = {
   highlight: string;
   category: string;
   image: string;
+  gallery: string[];
 };
 
 export type Package = {
@@ -19,8 +20,8 @@ export type Package = {
   price: string;
 };
 
-// DEMONSTRAÇÃO: todos os registros abaixo são fictícios e existem apenas
-// para validar a experiência da Fase 1 até a integração com o Supabase.
+// DEMONSTRAÇÃO: todos os registros e imagens abaixo são fictícios e existem
+// apenas para validar a experiência até a integração com o cadastro real.
 
 export const demoTalents: Talent[] = [
   {
@@ -33,7 +34,8 @@ export const demoTalents: Talent[] = [
     availability: 'Disponível para campanhas e eventos',
     highlight: 'Conexão com o público regional',
     category: 'Apresentação',
-    image: '/talentos/maria-silva.png',
+    image: '/talentos/maria-silva/foto-0.webp',
+    gallery: ['/talentos/maria-silva/foto-0.webp', '/talentos/maria-silva/foto-1.webp', '/talentos/maria-silva/foto-2.webp', '/talentos/maria-silva/foto-3.webp'],
   },
   {
     slug: 'joao-pereira',
@@ -45,7 +47,8 @@ export const demoTalents: Talent[] = [
     availability: 'Aberto para projetos regionais',
     highlight: 'Narrativa visual e produção ágil',
     category: 'Audiovisual',
-    image: '/talentos/joao-pereira.png',
+    image: '/talentos/joao-pereira/foto-0.webp',
+    gallery: ['/talentos/joao-pereira/foto-0.webp', '/talentos/joao-pereira/foto-1.webp', '/talentos/joao-pereira/foto-2.webp', '/talentos/joao-pereira/foto-3.webp'],
   },
   {
     slug: 'ana-lima',
@@ -57,37 +60,15 @@ export const demoTalents: Talent[] = [
     availability: 'Disponível para lançamentos e campanhas',
     highlight: 'Versatilidade para campanhas locais',
     category: 'Modelo',
-    image: '/talentos/ana-lima.png',
+    image: '/talentos/ana-lima/foto-0.webp',
+    gallery: ['/talentos/ana-lima/foto-0.webp', '/talentos/ana-lima/foto-1.webp', '/talentos/ana-lima/foto-2.webp', '/talentos/ana-lima/foto-3.webp'],
   },
 ];
 
 export const demoPackages: Package[] = [
-  {
-    slug: 'presenca-local',
-    name: 'Presença Local',
-    audience: 'Pequenos negócios que querem começar com estratégia e alcance regional',
-    benefits: ['Seleção orientada de talento', 'Briefing de campanha', '1 entrega principal de conteúdo'],
-    price: 'a partir de R$ 890',
-  },
-  {
-    slug: 'campanha-regional',
-    name: 'Campanha Regional',
-    audience: 'Empresas que precisam de divulgação integrada e presença em diferentes formatos',
-    benefits: ['Curadoria de talentos', 'Produção audiovisual', 'Plano de divulgação regional'],
-    price: 'a partir de R$ 2.490',
-  },
-  {
-    slug: 'attual-360',
-    name: 'Attual 360',
-    audience: 'Projetos especiais com estratégia, conteúdo, mídia e acompanhamento completo',
-    benefits: ['Equipe dedicada', 'Conteúdo multiplataforma', 'Gestão e relatório de campanha'],
-    price: 'Sob consulta',
-  },
+  { slug: 'presenca-local', name: 'Presença Local', audience: 'Pequenos negócios que querem começar com estratégia e alcance regional', benefits: ['Seleção orientada de talento', 'Briefing de campanha', '1 entrega principal de conteúdo'], price: 'a partir de R$ 890' },
+  { slug: 'campanha-regional', name: 'Campanha Regional', audience: 'Empresas que precisam de divulgação integrada e presença em diferentes formatos', benefits: ['Curadoria de talentos', 'Produção audiovisual', 'Plano de divulgação regional'], price: 'a partir de R$ 2.490' },
+  { slug: 'attual-360', name: 'Attual 360', audience: 'Projetos especiais com estratégia, conteúdo, mídia e acompanhamento completo', benefits: ['Equipe dedicada', 'Conteúdo multiplataforma', 'Gestão e relatório de campanha'], price: 'Sob consulta' },
 ];
 
-export const adminMetrics = {
-  leads: 24,
-  activeProjects: 8,
-  registeredTalents: 36,
-  campaignStatus: 'Em crescimento',
-};
+export const adminMetrics = { leads: 24, activeProjects: 8, registeredTalents: 36, campaignStatus: 'Em crescimento' };
