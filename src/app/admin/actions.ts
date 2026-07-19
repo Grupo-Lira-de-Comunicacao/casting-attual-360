@@ -27,8 +27,8 @@ function validateInput(input: RequestAdminUpdate): string | null {
   if (!allowedTypes.includes(input.request_type)) return 'Tipo inválido.';
   if (!allowedStatuses.includes(input.status)) return 'Status inválido.';
   if (input.name.length < 2 || input.name.length > 120) return 'Informe um nome entre 2 e 120 caracteres.';
-  if (input.email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) return 'Informe um e-mail válido.';
-  if (input.organization.length > 160) return 'Empresa ou identificação deve ter até 160 caracteres.';
+  if (input.email.length > 180 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) return 'Informe um e-mail válido com até 180 caracteres.';
+  if (input.organization.length < 2 || input.organization.length > 180) return 'Empresa ou identificação deve ter entre 2 e 180 caracteres.';
   if (input.assigned_to.length > 120) return 'Responsável deve ter até 120 caracteres.';
   if (input.internal_notes.length > 2000) return 'Observações internas devem ter até 2.000 caracteres.';
   return null;
