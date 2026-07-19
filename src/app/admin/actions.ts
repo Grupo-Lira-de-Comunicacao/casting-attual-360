@@ -2,47 +2,61 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import type { RequestStatus } from '@/types/request';
+import type { RequestAdminUpdate, RequestRecord, RequestStatus, RequestType } from '@/types/request';
 
 const allowedStatuses: RequestStatus[] = ['novo', 'em_analise', 'contatado', 'arquivado'];
+const allowedTypes: RequestType[] = ['empresa', 'talento'];
 
-type UpdateRequestStatusResult =
-  | { ok: true; status: RequestStatus }
+type UpdateResult =
+  | { ok: true; request: RequestRecord }
   | { ok: false; error: string };
 
-export async function updateRequestStatus(
-  requestId: number,
-  status: RequestStatus,
-): Promise<UpdateRequestStatusResult> {
-  if (!Number.isInteger(requestId) || requestId <= 0) {
-    return { ok: false, error: 'Solicitação inválida.' };
-  }
+function normalizeInput(input: RequestAdminUpdate): RequestAdminUpdate {
+  return {
+    request_type: input.request_type,
+    name: input.name.trim(),
+    email: input.email.trim().toLowerCase(),
+    organization: input.organization.trim(),
+    status: input.status,
+    assigned_to: input.assigned_to.trim(),
+    internal_notes: input.internal_notes.trim(),
+  };
+}
 
-  if (!allowedStatuses.includes(status)) {
-    return { ok: false, error: 'Status inválido.' };
-  }
+function validateInput(input: RequestAdminUpdate): string | null {
+  if (!allowedTypes.includes(input.request_type)) return 'Tipo inválido.';
+  if (!allowedStatuses.includes(input.status)) return 'Status inválido.';
+  if (input.name.length < 2 || input.name.length > 120) return 'Informe um nome entre 2 e 120 caracteres.';
+  if (input.email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) return 'Informe um e-mail válido.';
+  if (input.organization.length > 160) return 'Empresa ou identificação deve ter até 160 caracteres.';
+  if (input.assigned_to.length > 120) return 'Responsável deve ter até 120 caracteres.';
+  if (input.internal_notes.length > 2000) return 'Observações internas devem ter até 2.000 caracteres.';
+  return null;
+}
+
+export async function updateRequestAdminFields(
+  requestId: number,
+  rawInput: RequestAdminUpdate,
+): Promise<UpdateResult> {
+  if (!Number.isInteger(requestId) || requestId <= 0) return { ok: false, error: 'Solicitação inválida.' };
+
+  const input = normalizeInput(rawInput);
+  const validationError = validateInput(input);
+  if (validationError) return { ok: false, error: validationError };
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { ok: false, error: 'Sua sessão expirou. Entre novamente.' };
-  }
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Sua sessão expirou. Entre novamente.' };
 
   const { data, error } = await supabase
     .from('requests')
-    .update({ status })
+    .update(input)
     .eq('id', requestId)
-    .select('status')
+    .select('id, created_at, updated_at, request_type, name, email, organization, message, status, is_test, assigned_to, internal_notes')
     .single();
 
-  if (error) {
-    return { ok: false, error: 'Não foi possível atualizar o status.' };
-  }
+  if (error) return { ok: false, error: 'Não foi possível salvar as alterações.' };
 
   revalidatePath('/admin');
-
-  return { ok: true, status: data.status as RequestStatus };
+  return { ok: true, request: data as RequestRecord };
 }
