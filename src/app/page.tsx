@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { SiteShell } from '@/components/site-shell';
 import { TalentCard } from '@/components/talent-card';
 import { CapiPlaceholder, MediaGlyph, PlatformPreview } from '@/components/home-visuals';
-import { demoTalents } from '@/data/demo-data';
+import { featuredTalents } from '@/data/demo-data';
 
 const benefits = [
   { title: 'Conecte', text: 'Marcas e talentos em relações relevantes.', icon: 'people' as const },
@@ -44,7 +44,7 @@ export default function HomePage() {
         <div className="relative mt-10 flex flex-wrap gap-3 border-t border-white/10 pt-8">{pillars.map((pillar, index) => <span key={pillar} className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200"><span className={index % 2 ? 'text-gold' : 'text-teal'}>✓</span> {pillar}</span>)}</div>
       </section>
 
-      <section className="py-20"><div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-bold uppercase tracking-[.28em] text-teal">Casting em destaque</p><h2 className="mt-3 text-3xl font-black sm:text-5xl">Talentos que movem histórias.</h2><p className="mt-4 text-base text-slate-400">Perfis e imagens fictícios para demonstração da Fase 1.</p></div><Link href="/talentos" className="font-bold text-teal">Explorar catálogo <span aria-hidden="true">→</span></Link></div><div className="mt-10 grid gap-6 md:grid-cols-3">{demoTalents.map((talent) => <TalentCard key={talent.slug} talent={talent} />)}</div></section>
+      <section className="py-20"><div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-bold uppercase tracking-[.28em] text-teal">Casting em destaque</p><h2 className="mt-3 text-3xl font-black sm:text-5xl">Talentos que movem histórias.</h2><p className="mt-4 text-base text-slate-400">Perfis e imagens fictícios para demonstração da Fase 1.</p></div><Link href="/talentos" className="font-bold text-teal">Explorar catálogo <span aria-hidden="true">→</span></Link></div><div className="mt-10 grid gap-6 md:grid-cols-3">{featuredTalents.map((talent) => <TalentCard key={talent.slug} talent={talent} />)}</div></section>
 
       <section className="grid gap-6 pb-20 lg:grid-cols-[1.2fr_.8fr]"><div className="rounded-[30px] border border-white/10 bg-gradient-to-r from-blue/25 via-teal/10 to-transparent p-7 sm:p-10"><p className="text-sm font-bold uppercase tracking-[.25em] text-teal">Próxima campanha</p><h2 className="mt-4 max-w-2xl text-3xl font-black sm:text-4xl">Sua marca pode ocupar mais espaços, com as vozes certas.</h2><div className="mt-7 flex flex-wrap gap-3"><Link href="/empresas" className="rounded-full bg-white px-6 py-3 font-bold text-navy">Solicitar curadoria</Link><Link href="/pacotes" className="rounded-full border border-white/20 px-6 py-3 font-bold">Conhecer soluções</Link></div></div><CapiPlaceholder /></section>
     </SiteShell>
