@@ -1,47 +1,32 @@
-ATLAS Dev Flow — Casting Attual 360
+ATLAS – Dev Flow | Casting Attual 360
 
-Autoridade e Branch Autorizada
-- Sérgio Lira é a única autoridade para aprovar commits e pushes.
-- Repositório: SPLIRA/casting-attual-360
-- Branch autorizada para escrita automatizada (codex): codex/fase-9-arquitetura-cadastros-reais
+Registro de status recente
+- Conforme instrução direta de Sérgio Lira, registramos que a alteração imediatamente anterior a este registro foi concluída com sucesso.
+- Não há execução nesta etapa: este arquivo é apenas um registro documental preparado para revisão e aprovação.
 
-Ações Disponíveis
-- read_only_repo_inventory: consulta de inventário de branches e commits.
-- read_only_repo_structure: listagem de estrutura e arquivos do repositório.
-- prepare_controlled_write: preparação de alterações somente em README.md e arquivos dentro de docs/, com geração de diff e de um approval_id; mantém uma solicitação pendente (sem commit e sem push nesta etapa).
+Próxima ação planejada (sem execução)
+- Título: Correção no fluxo do Telegram
+- Objetivo: 
+  - Exibir os nomes das ações SEM formatação Markdown nas mensagens do bot/fluxo de Telegram.
+  - Remover o rodapé automático atualmente adicionado pelo n8n nas mensagens do Telegram.
+- Detalhamento do plano está em docs/flows/telegram-correcoes.md.
 
-Capacidades Atuais
-- O sistema já consegue:
-  - Preparar alterações em README.md e em arquivos dentro de docs/ via prepare_controlled_write.
-  - Gerar um approval_id para cada solicitação preparada.
-  - Após aprovação explícita de Sérgio vinculada ao approval_id, realizar commit e push exclusivamente na branch codex autorizada (codex/fase-9-arquitetura-cadastros-reais). Nenhum merge é realizado.
-- Alterações em src/ continuam condicionadas à passagem de lint, typecheck e build antes de qualquer commit e push.
+Aprovação e execução controlada
+- O Codex Runner está em modo seguro (execução desativada). Esta preparação gerará um approval_id.
+- Após o Runner retornar o approval_id, a aprovação de Sérgio Lira será solicitada. Somente após aprovação explícita a execução/commit será realizada.
 
-Status Operacional Atual do Runner
-- O Codex Runner encontra-se em modo seguro, com execução de código desativada. Portanto, após a aprovação de uma solicitação, a etapa de commit e push ficará pendente até que o Runner seja habilitado. Não são afirmadas nem realizadas execuções de testes, varreduras, relatórios, commits, artefatos ou quaisquer alterações enquanto o modo seguro estiver ativo.
+Restrições e salvaguardas desta etapa
+- Sem alterações em main ou master.
+- Sem merge.
+- Sem alterações em src/.
+- Sem SQL, migrações ou acesso a banco de dados.
+- Sem publicação em produção.
+- Sem alterações de domínio, DNS, custos ou credenciais.
+- Sem exclusão de arquivos ou dados.
 
-Restrições e Proibições (Totais)
-- Proibido modificar main ou master.
-- Proibido realizar merge.
-- Proibido executar SQL ou interagir com banco de dados.
-- Proibido publicar em produção.
-- Proibido alterar domínio, DNS, custos ou credenciais (.env, chaves, segredos).
-- Proibido escrever fora de README.md e docs/ nesta fase.
-- Proibido excluir arquivos ou dados.
-- Proibido alterar pastas sensíveis como supabase/.
+Responsável e autoridade
+- Autoridade de aprovação: Sérgio Lira.
+- Este documento é mantido pelo ATLAS (supervisor técnico) para garantir rastreabilidade e conformidade.
 
-Fluxo Operacional Padrão
-1) Solicitação: Sérgio descreve o que deve ser criado/alterado em README.md ou docs/.
-2) Preparação: o sistema executa prepare_controlled_write para gerar alterações em cópia temporária, produzir o diff e retornar um approval_id. Não há commit nem push nesta etapa.
-3) Retorno: o approval_id é devolvido a Sérgio para revisão.
-4) Aprovação: Sérgio aprova explicitamente informando o approval_id correspondente.
-5) Commit e Push: após a aprovação, o fluxo prevê commit e push somente na branch autorizada (codex/fase-9-arquitetura-cadastros-reais). A execução dessa etapa depende do estado do Runner. Não são realizados merges.
-
-Padrões de Resposta do ATLAS
-- As respostas operacionais são fornecidas exclusivamente em JSON válido.
-- Na preparação (prepare_controlled_write), a solicitação não exige aprovação imediata: trata-se apenas da criação do diff com retorno do approval_id para revisão humana.
-- Em caso de risco, ambiguidade ou qualquer pedido proibido (main, master, merge, SQL, produção, domínios/DNS, custos, credenciais, exclusões, escrita fora de README.md e docs/), a solicitação deve ser bloqueada.
-
-Escopo Atual de Escrita
-- Permitido: README.md e docs/.
-- Demais caminhos permanecem bloqueados nesta fase.
+Histórico de versões deste documento
+- [Planejada] Entrada atual: registro de conclusão da alteração anterior e plano de correção no Telegram (aguardando approval_id e aprovação do Sérgio para efetivar commit).
