@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { requireAdminAction } from '@/lib/admin';
 import { createClient } from '@/lib/supabase/server';
 import type { RequestAdminUpdate, RequestRecord, RequestStatus, RequestType } from '@/types/request';
 
@@ -38,6 +39,9 @@ export async function updateRequestAdminFields(
   requestId: number,
   rawInput: RequestAdminUpdate,
 ): Promise<UpdateResult> {
+  const authorization = await requireAdminAction();
+  if (!authorization.ok) return { ok: false, error: authorization.error };
+
   if (!Number.isInteger(requestId) || requestId <= 0) return { ok: false, error: 'Solicitação inválida.' };
 
   const input = normalizeInput(rawInput);
@@ -45,9 +49,6 @@ export async function updateRequestAdminFields(
   if (validationError) return { ok: false, error: validationError };
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: 'Sua sessão expirou. Entre novamente.' };
-
   const { data, error } = await supabase
     .from('requests')
     .update(input)
