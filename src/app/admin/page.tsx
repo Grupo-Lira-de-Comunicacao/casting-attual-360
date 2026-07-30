@@ -1,16 +1,11 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { RequestManagement } from '@/components/admin/request-management';
 import { SiteShell } from '@/components/site-shell';
 import { requireAdminPage } from '@/lib/admin';
 import { createClient } from '@/lib/supabase/server';
-import type { RequestHistoryEntry, RequestRecord, RequestStatus } from '@/types/request';
+import { getAdminTalents } from '@/lib/talents/queries';
 
 export const dynamic = 'force-dynamic';
-
-function countByStatus(requests: RequestRecord[], status: RequestStatus) {
-  return requests.filter((request) => request.status === status).length;
-}
 
 async function signOut() {
   'use server';
@@ -50,27 +45,11 @@ export default async function AdminPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/admin/login?next=/admin');
 
-  const [{ data, error }, { data: historyData, error: historyError }] = await Promise.all([
-    supabase
-      .from('requests')
-      .select('id, created_at, updated_at, request_type, name, email, organization, message, status, is_test, assigned_to, internal_notes')
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('request_admin_history')
-      .select('id, request_id, changed_at, changed_by_email, changes')
-      .order('changed_at', { ascending: false })
-      .limit(200),
-  ]);
-
-  const requests = (data ?? []) as RequestRecord[];
-  const history = (historyData ?? []) as RequestHistoryEntry[];
-  const loadError = error ?? historyError;
-  const metrics = [
-    { label: 'Solicitações', value: requests.length },
-    { label: 'Novas', value: countByStatus(requests, 'novo') },
-    { label: 'Em análise', value: countByStatus(requests, 'em_analise') },
-    { label: 'Contatadas', value: countByStatus(requests, 'contatado') },
-  ];
+  const { talents, error } = await getAdminTalents();
+  const total = talents.length;
+  const active = talents.filter((talent) => talent.ativo).length;
+  const featured = talents.filter((talent) => talent.destaque).length;
+  const inactive = total - active;
 
   return (
     <SiteShell>
@@ -79,30 +58,54 @@ export default async function AdminPage() {
           <div className="flex flex-wrap items-start justify-between gap-5">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white/70">Painel administrativo</p>
-              <h1 className="mt-3 text-3xl font-black">Gestão completa de solicitações</h1>
-              <p className="mt-3 max-w-2xl text-white/80">Corrija dados administrativos, atribua responsáveis e acompanhe cada alteração com auditoria.</p>
-              <Link href="/admin/talentos" className="mt-5 inline-flex rounded-full border border-white/25 bg-white/10 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-white/20">Gerenciar talentos</Link>
+              <h1 className="mt-3 text-3xl font-black">Visão geral do Casting Attual 360</h1>
+              <p className="mt-3 max-w-2xl text-white/80">Acompanhe os talentos cadastrados e acesse rapidamente as áreas disponíveis da plataforma.</p>
             </div>
             <form action={signOut}><button className="rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-white/20">Sair</button></form>
           </div>
           <p className="mt-6 text-sm text-white/70">Administrador autorizado: {user.email}</p>
         </section>
 
-        {loadError ? (
+        {error ? (
           <section className="rounded-[28px] border border-amber-200 bg-amber-50 p-8 text-amber-950 shadow-soft">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-700">Estrutura da Fase 6 pendente</p>
-            <h2 className="mt-2 text-2xl font-black">Não foi possível carregar a gestão completa</h2>
-            <p className="mt-3 leading-7">O código está pronto, mas o SQL da Fase 6 precisa ser revisado e aprovado antes de habilitar os novos campos e o histórico.</p>
-            <pre className="mt-5 overflow-x-auto rounded-2xl bg-amber-100 p-4 text-sm">{loadError.message}</pre>
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-700">Atenção</p>
+            <h2 className="mt-2 text-2xl font-black">Não foi possível carregar os indicadores</h2>
+            <p className="mt-3 leading-7">A gestão de talentos continua disponível pelo botão abaixo.</p>
           </section>
         ) : (
-          <>
-            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {metrics.map((item) => <div key={item.label} className="rounded-[24px] border border-slate-200 bg-white p-5 text-navy shadow-soft"><p className="text-sm font-semibold text-slate-500">{item.label}</p><p className="mt-2 text-3xl font-black">{item.value}</p></div>)}
-            </section>
-            {requests.length === 0 ? <section className="rounded-[28px] border border-slate-200 bg-white p-8 text-slate-600 shadow-soft">Nenhuma solicitação encontrada.</section> : <RequestManagement requests={requests} history={history} />}
-          </>
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {[
+              { label: 'Talentos cadastrados', value: total },
+              { label: 'Ativos', value: active },
+              { label: 'Em destaque', value: featured },
+              { label: 'Inativos', value: inactive },
+            ].map((item) => (
+              <div key={item.label} className="rounded-[24px] border border-slate-200 bg-white p-5 text-navy shadow-soft">
+                <p className="text-sm font-semibold text-slate-500">{item.label}</p>
+                <p className="mt-2 text-3xl font-black">{item.value}</p>
+              </div>
+            ))}
+          </section>
         )}
+
+        <section className="grid gap-5 lg:grid-cols-2">
+          <div className="rounded-[28px] border border-slate-200 bg-white p-7 text-navy shadow-soft">
+            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue">Talentos</p>
+            <h2 className="mt-3 text-2xl font-black">Gerenciar catálogo</h2>
+            <p className="mt-3 leading-7 text-slate-600">Cadastre, edite, destaque, ordene e altere a disponibilidade dos profissionais.</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/admin/talentos" className="rounded-full bg-blue px-5 py-3 text-sm font-bold text-white transition hover:opacity-90">Gerenciar talentos</Link>
+              <Link href="/admin/talentos/novo" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-bold text-navy transition hover:bg-slate-50">Novo talento</Link>
+            </div>
+          </div>
+
+          <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-7 text-navy shadow-soft">
+            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">Próxima fase</p>
+            <h2 className="mt-3 text-2xl font-black">Solicitações públicas</h2>
+            <p className="mt-3 leading-7 text-slate-600">O módulo de inscrições, análise e aprovação será ativado após a criação e validação da estrutura <code>public.requests</code>.</p>
+            <span className="mt-6 inline-flex rounded-full bg-slate-200 px-4 py-2 text-sm font-bold text-slate-600">Em breve</span>
+          </div>
+        </section>
       </div>
     </SiteShell>
   );
