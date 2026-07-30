@@ -1,4 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
+import { createHash } from "node:crypto";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 type TelegramUser = {
@@ -24,6 +25,11 @@ type TelegramUpdate = {
   message?: TelegramMessage;
 };
 
+type ParsedCommand = {
+  name: string | null;
+  args: string[];
+};
+
 const START_MESSAGE = [
   "Olá! Bem-vindo ao Casting Attual 360.",
   "",
@@ -37,18 +43,23 @@ const HELP_MESSAGE = [
   "/start — iniciar o atendimento",
   "/ajuda — ver esta lista",
   "/status — consultar o estágio atual da integração",
+  "/vincular CODIGO — conectar seu cadastro ao Telegram",
 ].join("\n");
 
 const STATUS_MESSAGE =
   "A integração do Casting Attual 360 com o Telegram e o ATTUAL ONE está em implantação. O catálogo e o painel administrativo continuam sendo a fonte oficial neste estágio.";
 
-function getCommand(text: string | undefined): string | null {
-  if (!text) return null;
+function parseCommand(text: string | undefined): ParsedCommand {
+  if (!text) return { name: null, args: [] };
 
-  const command = text.trim().split(/\s+/, 1)[0]?.toLowerCase();
-  if (!command?.startsWith("/")) return null;
+  const parts = text.trim().split(/\s+/);
+  const rawCommand = parts.shift()?.toLowerCase();
+  if (!rawCommand?.startsWith("/")) return { name: null, args: [] };
 
-  return command.replace(/@[a-zA-Z0-9_]+$/, "");
+  return {
+    name: rawCommand.replace(/@[a-zA-Z0-9_]+$/, ""),
+    args: parts,
+  };
 }
 
 function getReply(command: string | null): string | null {
@@ -58,20 +69,32 @@ function getReply(command: string | null): string | null {
   return null;
 }
 
-async function registerIntegrationEvent(update: TelegramUpdate, command: string | null) {
+function hashLinkCode(code: string): string {
+  return createHash("sha256").update(code.trim().toUpperCase()).digest("hex");
+}
+
+function createServerSupabase(): SupabaseClient | null {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!supabaseUrl || !serviceRoleKey) {
+  if (!supabaseUrl || !serviceRoleKey) return null;
+
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+async function registerIntegrationEvent(
+  supabase: SupabaseClient | null,
+  update: TelegramUpdate,
+  command: string | null,
+) {
+  if (!supabase) {
     console.warn("Supabase server integration is not configured; event was not recorded.");
     return;
   }
 
   const message = update.message;
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-
   const { error } = await supabase.from("integration_events").insert({
     event_type: command ? "telegram.command.received" : "telegram.update.received",
     source_system: "telegram",
@@ -93,6 +116,123 @@ async function registerIntegrationEvent(update: TelegramUpdate, command: string 
   if (error) {
     console.error("Unable to register Telegram integration event.", error.message);
   }
+}
+
+async function linkTalentAccount(
+  supabase: SupabaseClient | null,
+  update: TelegramUpdate,
+  code: string | undefined,
+): Promise<string> {
+  if (!supabase) {
+    return "O vínculo ainda não está disponível porque a integração do servidor não foi configurada.";
+  }
+
+  const message = update.message;
+  const telegramUserId = message?.from?.id;
+  const telegramChatId = message?.chat?.id;
+
+  if (!telegramUserId || !telegramChatId) {
+    return "Não foi possível identificar sua conta do Telegram.";
+  }
+
+  if (!code) {
+    return "Informe o código recebido pela produção. Exemplo: /vincular ABCD2345";
+  }
+
+  const tokenHash = hashLinkCode(code);
+  const now = new Date().toISOString();
+
+  const { data: token, error: tokenError } = await supabase
+    .from("telegram_link_tokens")
+    .select("id, talent_id, expira_em")
+    .eq("token_hash", tokenHash)
+    .is("usado_em", null)
+    .is("cancelado_em", null)
+    .gt("expira_em", now)
+    .maybeSingle();
+
+  if (tokenError || !token) {
+    return "Código inválido, expirado ou já utilizado. Solicite um novo código à produção.";
+  }
+
+  const { data: accountByTalent } = await supabase
+    .from("talent_telegram_accounts")
+    .select("id, telegram_user_id")
+    .eq("talent_id", token.talent_id)
+    .eq("ativo", true)
+    .maybeSingle();
+
+  if (accountByTalent && accountByTalent.telegram_user_id !== telegramUserId) {
+    return "Este cadastro já está vinculado a outra conta. Fale com a produção para revisar o vínculo.";
+  }
+
+  const { data: accountByUser } = await supabase
+    .from("talent_telegram_accounts")
+    .select("id, talent_id")
+    .eq("telegram_user_id", telegramUserId)
+    .maybeSingle();
+
+  if (accountByUser && accountByUser.talent_id !== token.talent_id) {
+    return "Esta conta do Telegram já está vinculada a outro cadastro. Fale com a produção.";
+  }
+
+  const accountPayload = {
+    talent_id: token.talent_id,
+    telegram_user_id: telegramUserId,
+    telegram_chat_id: telegramChatId,
+    telegram_username: message?.from?.username ?? null,
+    primeiro_nome: message?.from?.first_name ?? null,
+    ultimo_nome: message?.from?.last_name ?? null,
+    idioma: message?.from?.language_code ?? null,
+    consentimento_mensagens: true,
+    consentimento_em: now,
+    ativo: true,
+  };
+
+  const accountId = accountByTalent?.id ?? accountByUser?.id;
+  const accountOperation = accountId
+    ? supabase.from("talent_telegram_accounts").update(accountPayload).eq("id", accountId)
+    : supabase.from("talent_telegram_accounts").insert(accountPayload);
+
+  const { error: accountError } = await accountOperation;
+  if (accountError) {
+    console.error("Unable to link Telegram account.", accountError.message);
+    return "Não foi possível concluir o vínculo agora. Tente novamente ou fale com a produção.";
+  }
+
+  const { error: tokenUpdateError } = await supabase
+    .from("telegram_link_tokens")
+    .update({
+      usado_em: now,
+      telegram_user_id: telegramUserId,
+      telegram_chat_id: telegramChatId,
+    })
+    .eq("id", token.id)
+    .is("usado_em", null);
+
+  if (tokenUpdateError) {
+    console.error("Unable to mark Telegram link token as used.", tokenUpdateError.message);
+  }
+
+  const { error: eventError } = await supabase.from("integration_events").insert({
+    event_type: "talent.telegram.linked.v1",
+    source_system: "casting-attual-360",
+    target_system: "attual-one",
+    talent_id: token.talent_id,
+    payload: {
+      update_id: update.update_id,
+      telegram_user_id: telegramUserId,
+      telegram_chat_id: telegramChatId,
+      telegram_username: message?.from?.username,
+      linked_at: now,
+    },
+  });
+
+  if (eventError) {
+    console.error("Unable to register talent.telegram.linked.v1.", eventError.message);
+  }
+
+  return "Cadastro vinculado com sucesso ao Casting Attual 360. A partir de agora você poderá receber avisos e convites por aqui.";
 }
 
 async function sendTelegramMessage(token: string, chatId: number, text: string) {
@@ -130,10 +270,15 @@ export async function POST(request: Request) {
 
     const update = (await request.json()) as TelegramUpdate;
     const chatId = update.message?.chat?.id;
-    const command = getCommand(update.message?.text);
-    const reply = getReply(command);
+    const command = parseCommand(update.message?.text);
+    const supabase = createServerSupabase();
 
-    await registerIntegrationEvent(update, command);
+    await registerIntegrationEvent(supabase, update, command.name);
+
+    let reply = getReply(command.name);
+    if (command.name === "/vincular") {
+      reply = await linkTalentAccount(supabase, update, command.args[0]);
+    }
 
     if (chatId !== undefined && reply) {
       await sendTelegramMessage(token, chatId, reply);
