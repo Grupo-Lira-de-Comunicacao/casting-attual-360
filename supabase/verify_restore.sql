@@ -5,6 +5,7 @@
 -- 002_create_talents.sql
 -- seed_talents.sql
 -- 003_create_integrations.sql
+-- 004_create_telegram_link_tokens.sql
 
 -- 1. Conferencia das tabelas principais
 select
@@ -12,6 +13,7 @@ select
   to_regclass('public.admin_users') as admin_users_table,
   to_regclass('public.talents') as talents_table,
   to_regclass('public.talent_telegram_accounts') as telegram_accounts_table,
+  to_regclass('public.telegram_link_tokens') as telegram_link_tokens_table,
   to_regclass('public.integration_events') as integration_events_table,
   to_regclass('public.notification_deliveries') as notification_deliveries_table;
 
@@ -23,6 +25,8 @@ union all
 select 'talents', count(*)::bigint from public.talents
 union all
 select 'talent_telegram_accounts', count(*)::bigint from public.talent_telegram_accounts
+union all
+select 'telegram_link_tokens', count(*)::bigint from public.telegram_link_tokens
 union all
 select 'integration_events', count(*)::bigint from public.integration_events
 union all
@@ -49,12 +53,23 @@ from public.talent_telegram_accounts
 group by telegram_user_id
 having count(*) > 1;
 
--- 5. Conferencia do bucket de fotos
+select token_hash, count(*)
+from public.telegram_link_tokens
+group by token_hash
+having count(*) > 1;
+
+-- 5. Estados invalidos de codigos Telegram
+select id, talent_id, expira_em, usado_em, cancelado_em
+from public.telegram_link_tokens
+where (usado_em is not null and cancelado_em is not null)
+   or (usado_em is not null and (telegram_user_id is null or telegram_chat_id is null));
+
+-- 6. Conferencia do bucket de fotos
 select id, name, public, file_size_limit, allowed_mime_types
 from storage.buckets
 where id = 'talent-photos';
 
--- 6. Conferencia de RLS
+-- 7. Conferencia de RLS
 select schemaname, tablename, rowsecurity
 from pg_tables
 where schemaname = 'public'
@@ -63,12 +78,13 @@ where schemaname = 'public'
     'admin_users',
     'talents',
     'talent_telegram_accounts',
+    'telegram_link_tokens',
     'integration_events',
     'notification_deliveries'
   )
 order by tablename;
 
--- 7. Politicas cadastradas
+-- 8. Politicas cadastradas
 select schemaname, tablename, policyname, roles, cmd
 from pg_policies
 where (schemaname = 'public' and tablename in (
@@ -76,19 +92,21 @@ where (schemaname = 'public' and tablename in (
     'admin_users',
     'talents',
     'talent_telegram_accounts',
+    'telegram_link_tokens',
     'integration_events',
     'notification_deliveries'
   ))
   or (schemaname = 'storage' and tablename = 'objects')
 order by schemaname, tablename, policyname;
 
--- 8. Triggers esperados
+-- 9. Triggers esperados
 select event_object_schema, event_object_table, trigger_name, action_timing, event_manipulation
 from information_schema.triggers
 where event_object_schema = 'public'
   and event_object_table in (
     'talents',
     'talent_telegram_accounts',
+    'telegram_link_tokens',
     'integration_events',
     'notification_deliveries'
   )
@@ -98,6 +116,6 @@ order by event_object_table, trigger_name;
 -- requests: 0 ou quantidade existente no seed, caso o seed inclua solicitacoes.
 -- admin_users: 0 antes da criacao manual do primeiro administrador.
 -- talents: quantidade inserida por seed_talents.sql (historicamente esperados: 16).
--- tabelas de integracao: 0 antes de conectar o bot.
+-- tabelas de integracao e telegram_link_tokens: 0 antes de conectar o bot.
 -- bucket talent-photos: exatamente 1 registro e public = false.
--- nenhuma consulta de duplicidade deve retornar linhas.
+-- nenhuma consulta de duplicidade ou estado invalido deve retornar linhas.
