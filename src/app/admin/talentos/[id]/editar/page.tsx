@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { SiteShell } from '@/components/site-shell';
 import { TalentForm } from '@/components/admin/talent-form';
+import { TelegramLinkCard } from '@/components/admin/telegram-link-card';
 import { requireAdminPage } from '@/lib/admin';
 import { getAdminTalent } from '@/lib/talents/queries';
 import { updateTalent } from '../../actions';
@@ -42,18 +43,21 @@ export default async function EditTalentPage({ params, searchParams }: PageProps
   }
   if (!talent) notFound();
 
+  const talentName = talent.nome_artistico || talent.nome;
+
   return (
     <SiteShell>
       <div className="space-y-6">
         <div>
           <Link href="/admin/talentos" className="font-bold text-teal">← Voltar aos talentos</Link>
-          <h1 className="mt-4 text-4xl font-black">Editar {talent.nome_artistico || talent.nome}</h1>
+          <h1 className="mt-4 text-4xl font-black">Editar {talentName}</h1>
         </div>
         {query.saved && (
           <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 font-semibold text-emerald-800">
             {query.saved === 'created' ? 'Talento criado' : 'Alterações salvas'} com sucesso.
           </p>
         )}
+        <TelegramLinkCard talentId={talent.id} talentName={talentName} />
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 text-navy shadow-soft sm:p-8">
           <TalentForm action={updateTalent} talent={talent} currentPhotoUrl={photoUrl} />
         </section>
