@@ -2,14 +2,12 @@ name: CI
 
 on:
   pull_request:
-    branches:
-      - main
-      - codex/fase-1-home
   push:
     branches:
       - main
       - codex/fase-1-home
       - codex/fase-2-evolucao-visual
+      - codex/fase-3-formularios-supabase
 
 permissions:
   contents: read

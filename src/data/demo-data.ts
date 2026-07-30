@@ -9,85 +9,37 @@ export type Talent = {
   highlight: string;
   category: string;
   image: string;
+  gallery: string[];
 };
 
-export type Package = {
-  slug: string;
-  name: string;
-  audience: string;
-  benefits: string[];
-  price: string;
-};
+export type Package = { slug: string; name: string; audience: string; benefits: string[]; price: string };
 
-// DEMONSTRAÇÃO: todos os registros abaixo são fictícios e existem apenas
-// para validar a experiência da Fase 1 até a integração com o Supabase.
-
+// DEMONSTRAÇÃO: todos os registros e imagens abaixo são fictícios.
 export const demoTalents: Talent[] = [
-  {
-    slug: 'maria-silva',
-    name: 'Maria Silva',
-    role: 'Apresentadora e criadora de conteúdo',
-    location: 'Caçapava, SP',
-    specialty: 'Cultura, eventos e lifestyle',
-    description: 'Comunicadora com presença em eventos regionais e conteúdo voltado a marcas que buscam proximidade, credibilidade e conexão com o público local.',
-    availability: 'Disponível para campanhas e eventos',
-    highlight: 'Conexão com o público regional',
-    category: 'Apresentação',
-    image: '/talentos/maria-silva.png',
-  },
-  {
-    slug: 'joao-pereira',
-    name: 'João Pereira',
-    role: 'Videomaker e produtor audiovisual',
-    location: 'São José dos Campos, SP',
-    specialty: 'Vídeo institucional e conteúdo digital',
-    description: 'Produtor com olhar estratégico para campanhas, cobertura de eventos, storytelling e vídeos institucionais para empresas do Vale do Paraíba.',
-    availability: 'Aberto para projetos regionais',
-    highlight: 'Narrativa visual e produção ágil',
-    category: 'Audiovisual',
-    image: '/talentos/joao-pereira.png',
-  },
-  {
-    slug: 'ana-lima',
-    name: 'Ana Lima',
-    role: 'Modelo e embaixadora de marca',
-    location: 'Taubaté, SP',
-    specialty: 'Moda, beleza e presença em eventos',
-    description: 'Perfil versátil para campanhas comerciais, lançamentos, fotografia publicitária e ativações presenciais em toda a região.',
-    availability: 'Disponível para lançamentos e campanhas',
-    highlight: 'Versatilidade para campanhas locais',
-    category: 'Modelo',
-    image: '/talentos/ana-lima.png',
-  },
+  { slug: 'maria-silva', name: 'Maria Silva', role: 'Apresentadora e criadora de conteúdo', location: 'Caçapava, SP', specialty: 'Cultura, eventos e lifestyle', description: 'Comunicadora com presença em eventos regionais e conteúdo voltado a marcas que buscam proximidade, credibilidade e conexão com o público local.', availability: 'Disponível para campanhas e eventos', highlight: 'Conexão com o público regional', category: 'Apresentação', image: '/talentos/maria-silva/foto-0.webp', gallery: ['/talentos/maria-silva/foto-0.webp', '/talentos/maria-silva/foto-1.webp', '/talentos/maria-silva/foto-2.webp', '/talentos/maria-silva/foto-3.webp'] },
+  { slug: 'joao-pereira', name: 'João Pereira', role: 'Videomaker e produtor audiovisual', location: 'São José dos Campos, SP', specialty: 'Vídeo institucional e conteúdo digital', description: 'Produtor com olhar estratégico para campanhas, cobertura de eventos, storytelling e vídeos institucionais para empresas do Vale do Paraíba.', availability: 'Aberto para projetos regionais', highlight: 'Narrativa visual e produção ágil', category: 'Audiovisual', image: '/talentos/joao-pereira/foto-0.webp', gallery: ['/talentos/joao-pereira/foto-0.webp', '/talentos/joao-pereira/foto-1.webp', '/talentos/joao-pereira/foto-2.webp', '/talentos/joao-pereira/foto-3.webp'] },
+  { slug: 'ana-lima', name: 'Ana Lima', role: 'Modelo e embaixadora de marca', location: 'Taubaté, SP', specialty: 'Moda, beleza e presença em eventos', description: 'Perfil versátil para campanhas comerciais, lançamentos, fotografia publicitária e ativações presenciais em toda a região.', availability: 'Disponível para lançamentos e campanhas', highlight: 'Versatilidade para campanhas locais', category: 'Modelo', image: '/talentos/ana-lima/foto-0.webp', gallery: ['/talentos/ana-lima/foto-0.webp', '/talentos/ana-lima/foto-1.webp', '/talentos/ana-lima/foto-2.webp', '/talentos/ana-lima/foto-3.webp'] },
+  { slug: 'camila-rocha', name: 'Camila Rocha', role: 'Influenciadora de lifestyle', location: 'Caçapava, SP', specialty: 'Rotina, bem-estar e negócios locais', description: 'Criadora de conteúdo com linguagem próxima e foco em experiências, serviços e marcas regionais.', availability: 'Disponível para campanhas digitais', highlight: 'Conteúdo espontâneo e conexão local', category: 'Influência', image: '/talentos/camila-rocha/perfil.webp', gallery: ['/talentos/camila-rocha/perfil.webp'] },
+  { slug: 'beatriz-nogueira', name: 'Beatriz Nogueira', role: 'Influenciadora de moda e beleza', location: 'Taubaté, SP', specialty: 'Beleza, moda e comportamento', description: 'Perfil elegante para lançamentos, conteúdo de produto, presença em eventos e campanhas de posicionamento.', availability: 'Disponível para collabs e eventos', highlight: 'Estética apurada e presença de marca', category: 'Influência', image: '/talentos/beatriz-nogueira/perfil.webp', gallery: ['/talentos/beatriz-nogueira/perfil.webp'] },
+  { slug: 'rafael-mendes', name: 'Rafael Mendes', role: 'Influenciador de tecnologia', location: 'São José dos Campos, SP', specialty: 'Tecnologia, inovação e produtividade', description: 'Comunicador digital focado em tornar tecnologia e inovação acessíveis ao público e aos pequenos negócios.', availability: 'Disponível para reviews e campanhas', highlight: 'Didática e credibilidade digital', category: 'Influência', image: '/talentos/rafael-mendes/perfil.webp', gallery: ['/talentos/rafael-mendes/perfil.webp'] },
+  { slug: 'juliana-costa', name: 'Juliana Costa', role: 'Repórter e entrevistadora', location: 'Jacareí, SP', specialty: 'Reportagem comunitária e eventos', description: 'Repórter com comunicação clara para entrevistas, entradas externas e cobertura de acontecimentos regionais.', availability: 'Disponível para coberturas e institucionais', highlight: 'Agilidade e escuta qualificada', category: 'Reportagem', image: '/talentos/juliana-costa/perfil.webp', gallery: ['/talentos/juliana-costa/perfil.webp'] },
+  { slug: 'marcos-vieira', name: 'Marcos Vieira', role: 'Repórter de rua', location: 'Pindamonhangaba, SP', specialty: 'Notícias locais e entrevistas', description: 'Profissional preparado para reportagens externas, entrevistas rápidas e apresentação de conteúdo informativo.', availability: 'Disponível para pautas regionais', highlight: 'Postura profissional em campo', category: 'Reportagem', image: '/talentos/marcos-vieira/perfil.webp', gallery: ['/talentos/marcos-vieira/perfil.webp'] },
+  { slug: 'antonio-ribeiro', name: 'Antônio Ribeiro', role: 'Locutor e voz profissional', location: 'Caçapava, SP', specialty: 'Locução comercial, rádio e eventos', description: 'Voz madura e versátil para chamadas, institucionais, publicidade, cerimônias e conteúdos radiofônicos.', availability: 'Disponível para gravações e eventos', highlight: 'Voz marcante e interpretação natural', category: 'Locução', image: '/talentos/antonio-ribeiro/perfil.webp', gallery: ['/talentos/antonio-ribeiro/perfil.webp'] },
+  { slug: 'debora-santos', name: 'Débora Santos', role: 'Fotógrafa', location: 'Taubaté, SP', specialty: 'Retratos, eventos e publicidade', description: 'Fotógrafa com olhar humano para ensaios, cobertura de eventos, produtos e campanhas de comunicação.', availability: 'Disponível para ensaios e eventos', highlight: 'Direção sensível e imagem autêntica', category: 'Fotografia', image: '/talentos/debora-santos/perfil.webp', gallery: ['/talentos/debora-santos/perfil.webp'] },
+  { slug: 'bruno-almeida', name: 'Bruno Almeida', role: 'Cinegrafista', location: 'São José dos Campos, SP', specialty: 'Captação multicâmera e externas', description: 'Operador de câmera voltado a entrevistas, eventos, programas, documentários e produções institucionais.', availability: 'Disponível para diárias e projetos', highlight: 'Precisão técnica e olhar de cena', category: 'Audiovisual', image: '/talentos/bruno-almeida/perfil.webp', gallery: ['/talentos/bruno-almeida/perfil.webp'] },
+  { slug: 'luana-freitas', name: 'Luana Freitas', role: 'Videomaker e criadora audiovisual', location: 'Jacareí, SP', specialty: 'Vídeos verticais e campanhas digitais', description: 'Videomaker especializada em conteúdo ágil para redes sociais, bastidores, marcas e pequenos negócios.', availability: 'Disponível para campanhas e recorrência', highlight: 'Ritmo digital e narrativa contemporânea', category: 'Audiovisual', image: '/talentos/luana-freitas/perfil.webp', gallery: ['/talentos/luana-freitas/perfil.webp'] },
+  { slug: 'renata-alves', name: 'Renata Alves', role: 'Jornalista e apresentadora', location: 'Taubaté, SP', specialty: 'Entrevistas, redação e apresentação', description: 'Jornalista com experiência demonstrativa em apuração, entrevistas e condução de conteúdos informativos.', availability: 'Disponível para projetos editoriais', highlight: 'Clareza, análise e boa condução', category: 'Jornalismo', image: '/talentos/renata-alves/perfil.webp', gallery: ['/talentos/renata-alves/perfil.webp'] },
+  { slug: 'eduardo-lima', name: 'Eduardo Lima', role: 'Jornalista e redator', location: 'São José dos Campos, SP', specialty: 'Notícias, roteiros e conteúdo institucional', description: 'Profissional focado em pesquisa, redação, entrevistas e transformação de pautas em conteúdo acessível.', availability: 'Disponível para redação e produção', highlight: 'Apuração e síntese editorial', category: 'Jornalismo', image: '/talentos/eduardo-lima/perfil.webp', gallery: ['/talentos/eduardo-lima/perfil.webp'] },
+  { slug: 'vanessa-martins', name: 'Vanessa Martins', role: 'Professora de dança', location: 'Caçapava, SP', specialty: 'Dança contemporânea e expressão corporal', description: 'Professora com abordagem acolhedora para aulas, oficinas, eventos, coreografias e projetos culturais.', availability: 'Disponível para aulas e eventos', highlight: 'Expressão, energia e didática', category: 'Dança', image: '/talentos/vanessa-martins/perfil.webp', gallery: ['/talentos/vanessa-martins/perfil.webp'] },
+  { slug: 'diego-souza', name: 'Diego Souza', role: 'Professor e coreógrafo', location: 'Pindamonhangaba, SP', specialty: 'Danças urbanas e performance', description: 'Professor e coreógrafo para oficinas, apresentações, videoclipes, eventos e preparação de elenco.', availability: 'Disponível para oficinas e produções', highlight: 'Performance e criação coreográfica', category: 'Dança', image: '/talentos/diego-souza/perfil.webp', gallery: ['/talentos/diego-souza/perfil.webp'] },
 ];
+
+export const featuredTalents = demoTalents.slice(0, 3);
 
 export const demoPackages: Package[] = [
-  {
-    slug: 'presenca-local',
-    name: 'Presença Local',
-    audience: 'Pequenos negócios que querem começar com estratégia e alcance regional',
-    benefits: ['Seleção orientada de talento', 'Briefing de campanha', '1 entrega principal de conteúdo'],
-    price: 'a partir de R$ 890',
-  },
-  {
-    slug: 'campanha-regional',
-    name: 'Campanha Regional',
-    audience: 'Empresas que precisam de divulgação integrada e presença em diferentes formatos',
-    benefits: ['Curadoria de talentos', 'Produção audiovisual', 'Plano de divulgação regional'],
-    price: 'a partir de R$ 2.490',
-  },
-  {
-    slug: 'attual-360',
-    name: 'Attual 360',
-    audience: 'Projetos especiais com estratégia, conteúdo, mídia e acompanhamento completo',
-    benefits: ['Equipe dedicada', 'Conteúdo multiplataforma', 'Gestão e relatório de campanha'],
-    price: 'Sob consulta',
-  },
+  { slug: 'presenca-local', name: 'Presença Local', audience: 'Pequenos negócios que querem começar com estratégia e alcance regional', benefits: ['Seleção orientada de talento', 'Briefing de campanha', '1 entrega principal de conteúdo'], price: 'a partir de R$ 890' },
+  { slug: 'campanha-regional', name: 'Campanha Regional', audience: 'Empresas que precisam de divulgação integrada e presença em diferentes formatos', benefits: ['Curadoria de talentos', 'Produção audiovisual', 'Plano de divulgação regional'], price: 'a partir de R$ 2.490' },
+  { slug: 'attual-360', name: 'Attual 360', audience: 'Projetos especiais com estratégia, conteúdo, mídia e acompanhamento completo', benefits: ['Equipe dedicada', 'Conteúdo multiplataforma', 'Gestão e relatório de campanha'], price: 'Sob consulta' },
 ];
 
-export const adminMetrics = {
-  leads: 24,
-  activeProjects: 8,
-  registeredTalents: 36,
-  campaignStatus: 'Em crescimento',
-};
+export const adminMetrics = { leads: 24, activeProjects: 8, registeredTalents: 36, campaignStatus: 'Em crescimento' };

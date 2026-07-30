@@ -2,7 +2,9 @@ import Link from 'next/link';
 import { SiteShell } from '@/components/site-shell';
 import { TalentCard } from '@/components/talent-card';
 import { CapiPlaceholder, MediaGlyph, PlatformPreview } from '@/components/home-visuals';
-import { demoTalents } from '@/data/demo-data';
+import { getFeaturedTalents } from '@/lib/talents/queries';
+
+export const dynamic = 'force-dynamic';
 
 const benefits = [
   { title: 'Conecte', text: 'Marcas e talentos em relações relevantes.', icon: 'people' as const },
@@ -13,7 +15,8 @@ const benefits = [
 
 const pillars = ['Foco regional', 'Parcerias reais', 'Diversidade', 'Visibilidade 360°', 'Segurança e ética'];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { talents: featuredTalents, usingFallback } = await getFeaturedTalents();
   return (
     <SiteShell>
       <section className="relative min-h-[720px] overflow-hidden rounded-[36px] border border-white/10 bg-[#061b31] px-6 py-10 shadow-[0_40px_120px_-45px_rgba(15,111,255,.65)] sm:px-10 lg:grid lg:grid-cols-[1fr_.95fr] lg:items-center lg:gap-10 lg:px-14 lg:py-16">
@@ -30,7 +33,7 @@ export default function HomePage() {
           </div>
           <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-400"><span>● Vídeo</span><span>● Fotografia</span><span>● Influência</span><span>● Mídia regional</span></div>
         </div>
-        <div className="relative z-10 mt-16 lg:mt-0"><PlatformPreview /></div>
+        <div className="relative z-10 mt-16 lg:mt-0"><PlatformPreview talents={featuredTalents} /></div>
       </section>
 
       <section aria-labelledby="beneficios" className="py-20">
@@ -44,7 +47,7 @@ export default function HomePage() {
         <div className="relative mt-10 flex flex-wrap gap-3 border-t border-white/10 pt-8">{pillars.map((pillar, index) => <span key={pillar} className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200"><span className={index % 2 ? 'text-gold' : 'text-teal'}>✓</span> {pillar}</span>)}</div>
       </section>
 
-      <section className="py-20"><div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-bold uppercase tracking-[.28em] text-teal">Casting em destaque</p><h2 className="mt-3 text-3xl font-black sm:text-5xl">Talentos que movem histórias.</h2><p className="mt-4 text-base text-slate-400">Perfis e imagens fictícios para demonstração da Fase 1.</p></div><Link href="/talentos" className="font-bold text-teal">Explorar catálogo <span aria-hidden="true">→</span></Link></div><div className="mt-10 grid gap-6 md:grid-cols-3">{demoTalents.map((talent) => <TalentCard key={talent.slug} talent={talent} />)}</div></section>
+      <section className="py-20"><div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-bold uppercase tracking-[.28em] text-teal">Casting em destaque</p><h2 className="mt-3 text-3xl font-black sm:text-5xl">Talentos que movem histórias.</h2><p className="mt-4 text-base text-slate-400">{usingFallback ? 'Perfis demonstrativos preservados enquanto o catálogo real é preparado.' : 'Perfis selecionados pela curadoria do Casting Attual 360.'}</p></div><Link href="/talentos" className="font-bold text-teal">Explorar catálogo <span aria-hidden="true">→</span></Link></div><div className="mt-10 grid gap-6 md:grid-cols-3">{featuredTalents.map((talent) => <TalentCard key={talent.slug} talent={talent} />)}</div></section>
 
       <section className="grid gap-6 pb-20 lg:grid-cols-[1.2fr_.8fr]"><div className="rounded-[30px] border border-white/10 bg-gradient-to-r from-blue/25 via-teal/10 to-transparent p-7 sm:p-10"><p className="text-sm font-bold uppercase tracking-[.25em] text-teal">Próxima campanha</p><h2 className="mt-4 max-w-2xl text-3xl font-black sm:text-4xl">Sua marca pode ocupar mais espaços, com as vozes certas.</h2><div className="mt-7 flex flex-wrap gap-3"><Link href="/empresas" className="rounded-full bg-white px-6 py-3 font-bold text-navy">Solicitar curadoria</Link><Link href="/pacotes" className="rounded-full border border-white/20 px-6 py-3 font-bold">Conhecer soluções</Link></div></div><CapiPlaceholder /></section>
     </SiteShell>
