@@ -5,10 +5,13 @@ export type TalentRecord = {
   nome_artistico: string | null;
   categoria: string;
   subcategorias: string[];
+  especialidades: string[];
+  habilidades: string[];
+  idiomas: string[];
+  disponibilidades: string[];
   cidade: string;
   estado: string;
   biografia: string;
-  habilidades: string[];
   foto_url: string | null;
   foto_path: string | null;
   instagram: string | null;
@@ -33,6 +36,11 @@ export type PublicTalent = {
   availability: string;
   highlight: string;
   category: string;
+  categories: string[];
+  specialties: string[];
+  skills: string[];
+  languages: string[];
+  availabilityOptions: string[];
   image: string | null;
   gallery: string[];
   instagram: string | null;
@@ -47,10 +55,13 @@ export type TalentInput = {
   nome_artistico: string;
   categoria: string;
   subcategorias: string[];
+  especialidades: string[];
+  habilidades: string[];
+  idiomas: string[];
+  disponibilidades: string[];
   cidade: string;
   estado: string;
   biografia: string;
-  habilidades: string[];
   foto_url: string;
   instagram: string;
   telefone: string;
@@ -63,4 +74,3 @@ export type TalentInput = {
 export type TalentActionState =
   | { ok: false; error: string }
   | { ok: true; message: string };
-
