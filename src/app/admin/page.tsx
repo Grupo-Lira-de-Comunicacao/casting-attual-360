@@ -101,9 +101,12 @@ export default async function AdminPage() {
 
           <div className="rounded-[28px] border border-sky-200 bg-sky-50 p-7 text-navy shadow-soft">
             <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue">Telegram + ATTUAL ONE</p>
-            <h2 className="mt-3 text-2xl font-black">Central de eventos</h2>
-            <p className="mt-3 leading-7 text-slate-600">Consulte a fila de integração, abra o payload, veja erros e reenvie eventos falhos ou cancelados.</p>
-            <Link href="/admin/integracoes/eventos" className="mt-6 inline-flex rounded-full bg-navy px-5 py-3 text-sm font-bold text-white transition hover:opacity-90">Abrir central</Link>
+            <h2 className="mt-3 text-2xl font-black">Integrações</h2>
+            <p className="mt-3 leading-7 text-slate-600">Acompanhe a saúde da ponte, consulte a fila, veja erros e reenvie eventos falhos ou cancelados.</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/admin/integracoes/metricas" className="inline-flex rounded-full bg-navy px-5 py-3 text-sm font-bold text-white transition hover:opacity-90">Ver métricas</Link>
+              <Link href="/admin/integracoes/eventos" className="inline-flex rounded-full border border-sky-300 bg-white px-5 py-3 text-sm font-bold text-navy transition hover:bg-sky-100">Abrir central</Link>
+            </div>
           </div>
 
           <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-7 text-navy shadow-soft">
