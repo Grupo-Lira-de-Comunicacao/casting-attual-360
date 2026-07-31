@@ -44,9 +44,18 @@ ATTUAL_ONE_INTEGRATION_SECRET=
 - lê estados `pendente` e `falhou`;
 - limita cada evento a 10 tentativas;
 - altera o estado para `processando` antes do envio;
+- recupera eventos presos em `processando` por mais de 15 minutos;
 - marca como `processado` após resposta HTTP de sucesso;
 - marca como `falhou` e registra `ultimo_erro` em caso de erro;
 - usa timeout de 10 segundos por entrega.
+
+## Recuperação de interrupções
+
+Antes de consultar a fila, o dispatcher procura eventos destinados ao ATTUAL ONE que estejam em `processando` e sem atualização há mais de 15 minutos. Esses registros voltam para `falhou` e ficam disponíveis para nova tentativa, desde que ainda não tenham atingido o limite de 10 tentativas.
+
+A resposta do endpoint inclui o campo `recovered`, informando quantos eventos presos foram liberados naquela execução.
+
+Essa recuperação cobre interrupções do processo, timeout da função, reinício do deploy e falha ocorrida depois da captura do evento. A idempotência no ATTUAL ONE continua obrigatória, pois um evento pode ter sido recebido antes de o Casting registrar a confirmação.
 
 ## Envelope enviado
 
@@ -86,5 +95,6 @@ curl -X POST "https://casting.example.com/api/integrations/dispatch" \
 1. Evento pendente muda para `processado` após confirmação do ATTUAL ONE.
 2. Evento não entregue muda para `falhou` e registra mensagem curta do erro.
 3. Nova execução reprocessa falhas sem criar um novo evento.
-4. Reenvio do mesmo `event_key` não duplica registros no ATTUAL ONE.
-5. Chamada sem segredo válido retorna HTTP 401.
+4. Evento interrompido em `processando` volta à fila após 15 minutos.
+5. Reenvio do mesmo `event_key` não duplica registros no ATTUAL ONE.
+6. Chamada sem segredo válido retorna HTTP 401.
