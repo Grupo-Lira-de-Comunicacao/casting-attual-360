@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { IntegrationEventAttempts } from '@/components/admin/integration-event-attempts';
 
 type IntegrationEvent = {
   id: string;
@@ -180,6 +181,9 @@ export function IntegrationEventsDashboard() {
           </dl>
           {selected.ultimo_erro && <p className="mt-6 rounded-2xl border border-red-400/30 bg-red-950/40 p-4 text-sm text-red-100"><strong>Último erro:</strong> {selected.ultimo_erro}</p>}
           <pre className="mt-6 max-h-96 overflow-auto rounded-2xl bg-black/40 p-5 text-xs leading-6 text-sky-100">{JSON.stringify(selected.payload, null, 2)}</pre>
+
+          <IntegrationEventAttempts eventId={selected.id} />
+
           {(selected.status === 'falhou' || selected.status === 'cancelado') && (
             <button type="button" disabled={retryingId === selected.id} onClick={() => void retryEvent(selected)} className="mt-6 rounded-full bg-white px-5 py-3 text-sm font-black text-navy disabled:opacity-60">
               {retryingId === selected.id ? 'Reprocessando…' : 'Reprocessar evento'}
