@@ -42,12 +42,19 @@ type Metrics = {
 };
 
 type MetricsResponse = { ok: boolean; metrics?: Metrics; error?: string };
+type OperationalAlert = { severity: 'critical' | 'warning'; title: string; detail: string };
 
 const PERIODS = [
   { label: '24 horas', hours: 24 },
   { label: '7 dias', hours: 168 },
   { label: '30 dias', hours: 720 },
 ];
+
+const ALERT_LIMITS = {
+  minimumSuccessRate: 90,
+  pendingQueue: 10,
+  failedEvents: 5,
+};
 
 function formatDuration(value: number | null) {
   if (value === null) return '—';
@@ -62,6 +69,44 @@ function healthLabel(metrics: Metrics) {
   if (rate >= 98) return { label: 'Excelente', detail: 'Integração operando normalmente' };
   if (rate >= 90) return { label: 'Estável', detail: 'Acompanhar falhas recentes' };
   return { label: 'Crítica', detail: 'Taxa de falha acima do aceitável' };
+}
+
+function getOperationalAlerts(metrics: Metrics): OperationalAlert[] {
+  const alerts: OperationalAlert[] = [];
+
+  if (metrics.performance.stuck_events > 0) {
+    alerts.push({
+      severity: 'critical',
+      title: `${metrics.performance.stuck_events} evento(s) travado(s)`,
+      detail: `Há eventos em processamento há mais de ${metrics.stuck_minutes} minutos. Verifique a central e reavalie o dispatcher.`,
+    });
+  }
+
+  if (metrics.window.success_rate !== null && metrics.window.success_rate < ALERT_LIMITS.minimumSuccessRate) {
+    alerts.push({
+      severity: 'critical',
+      title: `Taxa de sucesso em ${metrics.window.success_rate}%`,
+      detail: `O índice está abaixo do limite operacional de ${ALERT_LIMITS.minimumSuccessRate}% para o período selecionado.`,
+    });
+  }
+
+  if (metrics.totals.pending >= ALERT_LIMITS.pendingQueue) {
+    alerts.push({
+      severity: 'warning',
+      title: `Fila pendente com ${metrics.totals.pending} eventos`,
+      detail: `A fila atingiu o limite de atenção de ${ALERT_LIMITS.pendingQueue} eventos. Confirme se o dispatcher está executando normalmente.`,
+    });
+  }
+
+  if (metrics.window.failed >= ALERT_LIMITS.failedEvents) {
+    alerts.push({
+      severity: 'warning',
+      title: `${metrics.window.failed} falhas no período`,
+      detail: `O volume de falhas atingiu o limite de atenção de ${ALERT_LIMITS.failedEvents}. Analise os tipos e erros mais recorrentes.`,
+    });
+  }
+
+  return alerts;
 }
 
 export function IntegrationMetricsDashboard() {
@@ -106,6 +151,7 @@ export function IntegrationMetricsDashboard() {
 
   if (!metrics) return null;
   const health = healthLabel(metrics);
+  const alerts = getOperationalAlerts(metrics);
 
   return (
     <section className="space-y-5 rounded-[28px] border border-slate-200 bg-white p-5 shadow-soft sm:p-7">
@@ -126,6 +172,28 @@ export function IntegrationMetricsDashboard() {
       </div>
 
       {error && <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">{error}</p>}
+
+      {alerts.length > 0 ? (
+        <div className="space-y-3" aria-label="Alertas operacionais">
+          {alerts.map((alert) => (
+            <div key={`${alert.title}-${alert.detail}`} className={`rounded-2xl border px-5 py-4 ${alert.severity === 'critical' ? 'border-red-200 bg-red-50 text-red-950' : 'border-amber-200 bg-amber-50 text-amber-950'}`}>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em]">{alert.severity === 'critical' ? 'Alerta crítico' : 'Atenção operacional'}</p>
+                  <h3 className="mt-1 text-lg font-black">{alert.title}</h3>
+                  <p className="mt-1 text-sm leading-6 opacity-80">{alert.detail}</p>
+                </div>
+                <a href="/admin/integracoes/eventos" className="rounded-full border border-current px-4 py-2 text-xs font-black transition hover:bg-white/50">Abrir central</a>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-emerald-950">
+          <p className="text-xs font-black uppercase tracking-[0.18em]">Operação normal</p>
+          <p className="mt-1 text-sm font-semibold">Nenhum limite de alerta foi atingido no período selecionado.</p>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <div className="rounded-2xl bg-slate-950 p-5 text-white sm:col-span-2 lg:col-span-1">
