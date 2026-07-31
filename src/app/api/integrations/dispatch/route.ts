@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 const MAX_BATCH_SIZE = 20;
 const MAX_ATTEMPTS = 10;
 const STALE_PROCESSING_MINUTES = 15;
+const MAX_RESPONSE_LENGTH = 2_000;
 
 type IntegrationEvent = {
   id: string;
@@ -52,6 +53,18 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Erro desconhecido";
 }
 
+function responsePayload(raw: string) {
+  const limited = raw.slice(0, MAX_RESPONSE_LENGTH);
+
+  if (!limited) return null;
+
+  try {
+    return JSON.parse(limited) as Record<string, unknown>;
+  } catch {
+    return { raw: limited };
+  }
+}
+
 export async function POST(request: NextRequest) {
   let config: ReturnType<typeof getServerConfig>;
 
@@ -76,24 +89,58 @@ export async function POST(request: NextRequest) {
     Date.now() - STALE_PROCESSING_MINUTES * 60 * 1000,
   ).toISOString();
 
-  const { data: recoveredEvents, error: recoveryError } = await supabase
+  const { data: staleEvents, error: staleQueryError } = await supabase
     .from("integration_events")
-    .update({
-      status: "falhou",
-      ultimo_erro: `Processamento interrompido por mais de ${STALE_PROCESSING_MINUTES} minutos; liberado para nova tentativa.`,
-    })
+    .select("id,tentativas")
     .eq("target_system", "attual-one")
     .eq("status", "processando")
     .lt("atualizado_em", staleBefore)
-    .lt("tentativas", MAX_ATTEMPTS)
-    .select("id");
+    .lt("tentativas", MAX_ATTEMPTS);
 
-  if (recoveryError) {
-    console.error("[dispatcher] falha ao recuperar eventos presos", recoveryError);
+  if (staleQueryError) {
+    console.error("[dispatcher] falha ao localizar eventos presos", staleQueryError);
     return NextResponse.json(
-      { error: "Falha ao recuperar eventos interrompidos." },
+      { error: "Falha ao localizar eventos interrompidos." },
       { status: 500 },
     );
+  }
+
+  for (const staleEvent of staleEvents ?? []) {
+    await supabase
+      .from("integration_event_attempts")
+      .update({
+        status: "interrompido",
+        finished_at: new Date().toISOString(),
+        error_message: `Processamento interrompido por mais de ${STALE_PROCESSING_MINUTES} minutos.`,
+      })
+      .eq("event_id", staleEvent.id)
+      .eq("attempt_number", staleEvent.tentativas)
+      .eq("status", "processando");
+  }
+
+  const staleIds = (staleEvents ?? []).map((event) => event.id);
+  let recoveredCount = 0;
+
+  if (staleIds.length > 0) {
+    const { data: recoveredEvents, error: recoveryError } = await supabase
+      .from("integration_events")
+      .update({
+        status: "falhou",
+        ultimo_erro: `Processamento interrompido por mais de ${STALE_PROCESSING_MINUTES} minutos; liberado para nova tentativa.`,
+      })
+      .in("id", staleIds)
+      .eq("status", "processando")
+      .select("id");
+
+    if (recoveryError) {
+      console.error("[dispatcher] falha ao recuperar eventos presos", recoveryError);
+      return NextResponse.json(
+        { error: "Falha ao recuperar eventos interrompidos." },
+        { status: 500 },
+      );
+    }
+
+    recoveredCount = recoveredEvents?.length ?? 0;
   }
 
   const { data, error } = await supabase
@@ -139,6 +186,33 @@ export async function POST(request: NextRequest) {
       continue;
     }
 
+    const startedAt = new Date();
+    const { data: attempt, error: attemptError } = await supabase
+      .from("integration_event_attempts")
+      .insert({
+        event_id: event.id,
+        attempt_number: nextAttempt,
+        started_at: startedAt.toISOString(),
+        status: "processando",
+      })
+      .select("id")
+      .single();
+
+    if (attemptError || !attempt) {
+      const message = `Nao foi possivel iniciar a auditoria da tentativa: ${attemptError?.message ?? "erro desconhecido"}`;
+
+      await supabase
+        .from("integration_events")
+        .update({ status: "falhou", ultimo_erro: message })
+        .eq("id", event.id);
+
+      results.push({ id: event.id, status: "falhou", error: message });
+      continue;
+    }
+
+    let httpStatus: number | null = null;
+    let receivedPayload: Record<string, unknown> | null = null;
+
     try {
       const response = await fetch(config.attualOneEventsUrl, {
         method: "POST",
@@ -163,8 +237,11 @@ export async function POST(request: NextRequest) {
         signal: AbortSignal.timeout(10_000),
       });
 
+      httpStatus = response.status;
+      const responseText = await response.text();
+      receivedPayload = responsePayload(responseText);
+
       if (!response.ok) {
-        const responseText = await response.text();
         throw new Error(
           `ATTUAL ONE respondeu ${response.status}: ${responseText.slice(0, 300)}`,
         );
@@ -183,21 +260,47 @@ export async function POST(request: NextRequest) {
         throw new Error(`Evento entregue, mas nao finalizado: ${completeError.message}`);
       }
 
+      await supabase
+        .from("integration_event_attempts")
+        .update({
+          status: "processado",
+          finished_at: new Date().toISOString(),
+          http_status: httpStatus,
+          response_payload: receivedPayload,
+          duration_ms: Date.now() - startedAt.getTime(),
+          error_message: null,
+        })
+        .eq("id", attempt.id);
+
       results.push({ id: event.id, status: "processado" });
     } catch (dispatchError) {
       const message = errorMessage(dispatchError).slice(0, 1000);
+      const finishedAt = new Date().toISOString();
 
-      await supabase
-        .from("integration_events")
-        .update({ status: "falhou", ultimo_erro: message })
-        .eq("id", event.id);
+      await Promise.all([
+        supabase
+          .from("integration_events")
+          .update({ status: "falhou", ultimo_erro: message })
+          .eq("id", event.id),
+        supabase
+          .from("integration_event_attempts")
+          .update({
+            status: "falhou",
+            finished_at: finishedAt,
+            http_status: httpStatus,
+            response_payload: receivedPayload,
+            duration_ms: Date.now() - startedAt.getTime(),
+            error_message: message,
+          })
+          .eq("id", attempt.id),
+      ]);
 
       results.push({ id: event.id, status: "falhou", error: message });
     }
   }
 
   return NextResponse.json({
-    recovered: recoveredEvents?.length ?? 0,
+    recovered: recoveredCount,
     selected: events.length,
     processed: results.filter((item) => item.status === "processado").length,
     failed: results.filter((item) => item.status === "falhou").length,
