@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 
 const MAX_BATCH_SIZE = 20;
 const MAX_ATTEMPTS = 10;
+const STALE_PROCESSING_MINUTES = 15;
 
 type IntegrationEvent = {
   id: string;
@@ -70,6 +71,30 @@ export async function POST(request: NextRequest) {
   const supabase = createClient(config.supabaseUrl, config.serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  const staleBefore = new Date(
+    Date.now() - STALE_PROCESSING_MINUTES * 60 * 1000,
+  ).toISOString();
+
+  const { data: recoveredEvents, error: recoveryError } = await supabase
+    .from("integration_events")
+    .update({
+      status: "falhou",
+      ultimo_erro: `Processamento interrompido por mais de ${STALE_PROCESSING_MINUTES} minutos; liberado para nova tentativa.`,
+    })
+    .eq("target_system", "attual-one")
+    .eq("status", "processando")
+    .lt("atualizado_em", staleBefore)
+    .lt("tentativas", MAX_ATTEMPTS)
+    .select("id");
+
+  if (recoveryError) {
+    console.error("[dispatcher] falha ao recuperar eventos presos", recoveryError);
+    return NextResponse.json(
+      { error: "Falha ao recuperar eventos interrompidos." },
+      { status: 500 },
+    );
+  }
 
   const { data, error } = await supabase
     .from("integration_events")
@@ -172,6 +197,7 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({
+    recovered: recoveredEvents?.length ?? 0,
     selected: events.length,
     processed: results.filter((item) => item.status === "processado").length,
     failed: results.filter((item) => item.status === "falhou").length,
