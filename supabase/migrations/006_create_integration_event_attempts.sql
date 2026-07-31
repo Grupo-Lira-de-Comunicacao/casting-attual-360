@@ -13,12 +13,11 @@ create table if not exists public.integration_event_attempts (
   response_payload jsonb,
   duration_ms integer check (duration_ms is null or duration_ms >= 0),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  constraint integration_event_attempts_event_attempt_unique unique (event_id, attempt_number)
+  updated_at timestamptz not null default now()
 );
 
 create index if not exists integration_event_attempts_event_id_idx
-  on public.integration_event_attempts(event_id, attempt_number desc);
+  on public.integration_event_attempts(event_id, created_at desc);
 
 create index if not exists integration_event_attempts_status_idx
   on public.integration_event_attempts(status, started_at desc);
@@ -49,5 +48,7 @@ grant all on table public.integration_event_attempts to service_role;
 
 comment on table public.integration_event_attempts is
   'Registro técnico e imutável das tentativas de entrega dos eventos de integração.';
+comment on column public.integration_event_attempts.attempt_number is
+  'Número da tentativa dentro do ciclo técnico atual; pode reiniciar após reprocessamento manual.';
 comment on column public.integration_event_attempts.response_payload is
   'Resposta resumida do destino, limitada pela aplicação para evitar dados excessivos.';
