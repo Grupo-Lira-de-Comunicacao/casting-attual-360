@@ -4,9 +4,21 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAdminAction } from '@/lib/admin';
 import { createClient } from '@/lib/supabase/server';
-import { PRODUCTION_TYPES } from '@/lib/productions/types';
+import { PRODUCTION_STATUSES, PRODUCTION_TYPES, type ProductionStatus } from '@/lib/productions/types';
 
 export type ProductionActionState = { ok: true; message?: string } | { ok: false; error: string };
+
+const STATUS_TRANSITIONS: Record<ProductionStatus, ProductionStatus[]> = {
+  draft: ['planning', 'cancelled', 'archived'],
+  planning: ['casting', 'cancelled', 'archived'],
+  casting: ['pre_production', 'cancelled', 'archived'],
+  pre_production: ['in_production', 'cancelled', 'archived'],
+  in_production: ['post_production', 'cancelled'],
+  post_production: ['completed', 'cancelled'],
+  completed: ['archived'],
+  cancelled: ['archived'],
+  archived: [],
+};
 
 function text(formData: FormData, key: string) {
   const value = String(formData.get(key) ?? '').trim();
@@ -23,39 +35,29 @@ function slugify(value: string) {
     .slice(0, 120);
 }
 
-export async function createProduction(_previousState: ProductionActionState, formData: FormData): Promise<ProductionActionState> {
-  const authorization = await requireAdminAction();
-  if (!authorization.ok) return { ok: false, error: authorization.error };
-
+function validateProductionForm(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim();
   const productionType = String(formData.get('production_type') ?? 'other');
-  if (name.length < 2 || name.length > 160) return { ok: false, error: 'Informe um nome de produção entre 2 e 160 caracteres.' };
-  if (!PRODUCTION_TYPES.includes(productionType as (typeof PRODUCTION_TYPES)[number])) return { ok: false, error: 'Tipo de produção inválido.' };
+  if (name.length < 2 || name.length > 160) return { error: 'Informe um nome de produção entre 2 e 160 caracteres.' } as const;
+  if (!PRODUCTION_TYPES.includes(productionType as (typeof PRODUCTION_TYPES)[number])) return { error: 'Tipo de produção inválido.' } as const;
 
   const startsAt = text(formData, 'starts_at');
   const endsAt = text(formData, 'ends_at');
-  if (startsAt && endsAt && new Date(endsAt).getTime() < new Date(startsAt).getTime()) return { ok: false, error: 'A data final não pode ser anterior à data inicial.' };
+  if (startsAt && endsAt && new Date(endsAt).getTime() < new Date(startsAt).getTime()) return { error: 'A data final não pode ser anterior à data inicial.' } as const;
 
   const budgetRaw = text(formData, 'budget_casting');
   const budget = budgetRaw ? Number(budgetRaw.replace(',', '.')) : null;
-  if (budget !== null && (!Number.isFinite(budget) || budget < 0)) return { ok: false, error: 'Informe um orçamento de casting válido.' };
+  if (budget !== null && (!Number.isFinite(budget) || budget < 0)) return { error: 'Informe um orçamento de casting válido.' } as const;
 
-  const supabase = await createClient();
-  const { data: authData } = await supabase.auth.getUser();
-  const userId = authData.user?.id ?? null;
   const customSlug = text(formData, 'slug');
-  const slug = slugify(customSlug || name);
-
-  const { data, error } = await supabase
-    .from('productions')
-    .insert({
+  return {
+    values: {
       name,
-      slug: slug || null,
+      slug: slugify(customSlug || name) || null,
       description: text(formData, 'description'),
       production_type: productionType,
       client_name: text(formData, 'client_name'),
       project_reference: text(formData, 'project_reference'),
-      status: 'draft',
       starts_at: startsAt ? new Date(startsAt).toISOString() : null,
       ends_at: endsAt ? new Date(endsAt).toISOString() : null,
       city: text(formData, 'city'),
@@ -63,12 +65,49 @@ export async function createProduction(_previousState: ProductionActionState, fo
       venue: text(formData, 'venue'),
       address: text(formData, 'address'),
       is_remote: formData.get('is_remote') === 'on',
-      responsible_user_id: userId,
       budget_casting: budget,
       currency: 'BRL',
       notes: text(formData, 'notes'),
-      created_by: userId,
-    })
+    },
+  } as const;
+}
+
+async function enqueueProductionEvent(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  eventType: string,
+  production: { id: string; name: string; production_type: string; status: string; starts_at: string | null },
+  extra: Record<string, unknown> = {},
+) {
+  return supabase.from('integration_events').insert({
+    event_type: eventType,
+    source_system: 'casting-attual-360',
+    target_system: 'attual-one',
+    production_id: production.id,
+    payload: {
+      production_id: production.id,
+      name: production.name,
+      type: production.production_type,
+      status: production.status,
+      starts_at: production.starts_at,
+      ...extra,
+    },
+  });
+}
+
+export async function createProduction(_previousState: ProductionActionState, formData: FormData): Promise<ProductionActionState> {
+  const authorization = await requireAdminAction();
+  if (!authorization.ok) return { ok: false, error: authorization.error };
+
+  const parsed = validateProductionForm(formData);
+  if ('error' in parsed) return { ok: false, error: parsed.error };
+
+  const supabase = await createClient();
+  const { data: authData } = await supabase.auth.getUser();
+  const userId = authData.user?.id ?? null;
+
+  const { data, error } = await supabase
+    .from('productions')
+    .insert({ ...parsed.values, status: 'draft', responsible_user_id: userId, created_by: userId })
     .select('id, name, production_type, status, starts_at')
     .single();
 
@@ -76,21 +115,80 @@ export async function createProduction(_previousState: ProductionActionState, fo
     return { ok: false, error: error?.code === '23505' ? 'Já existe uma produção com esse slug.' : 'Não foi possível criar a produção.' };
   }
 
-  const { error: integrationError } = await supabase.from('integration_events').insert({
-    event_type: 'casting.production.created',
-    source_system: 'casting-attual-360',
-    target_system: 'attual-one',
-    production_id: data.id,
-    payload: {
-      production_id: data.id,
-      name: data.name,
-      type: data.production_type,
-      status: data.status,
-      starts_at: data.starts_at,
-    },
-  });
+  const { error: integrationError } = await enqueueProductionEvent(supabase, 'casting.production.created', data);
 
   revalidatePath('/admin/producoes');
   revalidatePath(`/admin/producoes/${data.id}`);
   redirect(`/admin/producoes/${data.id}?created=1${integrationError ? '&integration=warning' : '&integration=queued'}`);
+}
+
+export async function updateProduction(productionId: string, _previousState: ProductionActionState, formData: FormData): Promise<ProductionActionState> {
+  const authorization = await requireAdminAction();
+  if (!authorization.ok) return { ok: false, error: authorization.error };
+
+  const parsed = validateProductionForm(formData);
+  if ('error' in parsed) return { ok: false, error: parsed.error };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('productions')
+    .update(parsed.values)
+    .eq('id', productionId)
+    .select('id, name, production_type, status, starts_at')
+    .single();
+
+  if (error || !data) {
+    return { ok: false, error: error?.code === '23505' ? 'Já existe uma produção com esse slug.' : 'Não foi possível salvar as alterações.' };
+  }
+
+  const { error: integrationError } = await enqueueProductionEvent(supabase, 'casting.production.updated', data);
+  revalidatePath('/admin/producoes');
+  revalidatePath(`/admin/producoes/${productionId}`);
+  redirect(`/admin/producoes/${productionId}?updated=1&integration=${integrationError ? 'warning' : 'queued'}`);
+}
+
+export async function changeProductionStatus(productionId: string, formData: FormData) {
+  const authorization = await requireAdminAction();
+  if (!authorization.ok) redirect(`/admin/producoes/${productionId}?status_error=unauthorized`);
+
+  const targetStatus = String(formData.get('target_status') ?? '') as ProductionStatus;
+  if (!PRODUCTION_STATUSES.includes(targetStatus)) redirect(`/admin/producoes/${productionId}?status_error=invalid`);
+
+  const supabase = await createClient();
+  const { data: current, error: currentError } = await supabase
+    .from('productions')
+    .select('id, status')
+    .eq('id', productionId)
+    .single();
+
+  if (currentError || !current) redirect(`/admin/producoes/${productionId}?status_error=load`);
+
+  const currentStatus = current.status as ProductionStatus;
+  if (!STATUS_TRANSITIONS[currentStatus]?.includes(targetStatus)) redirect(`/admin/producoes/${productionId}?status_error=transition`);
+
+  const archivedAt = targetStatus === 'archived' ? new Date().toISOString() : null;
+  const { data, error } = await supabase
+    .from('productions')
+    .update({ status: targetStatus, archived_at: archivedAt })
+    .eq('id', productionId)
+    .select('id, name, production_type, status, starts_at')
+    .single();
+
+  if (error || !data) redirect(`/admin/producoes/${productionId}?status_error=save`);
+
+  const eventType = targetStatus === 'archived' ? 'casting.production.archived' : 'casting.production.status_changed';
+  const { error: integrationError } = await enqueueProductionEvent(supabase, eventType, data, {
+    previous_status: currentStatus,
+    current_status: targetStatus,
+  });
+
+  revalidatePath('/admin/producoes');
+  revalidatePath(`/admin/producoes/${productionId}`);
+  redirect(`/admin/producoes/${productionId}?status_changed=1&integration=${integrationError ? 'warning' : 'queued'}`);
+}
+
+export async function archiveProduction(productionId: string) {
+  const formData = new FormData();
+  formData.set('target_status', 'archived');
+  return changeProductionStatus(productionId, formData);
 }
