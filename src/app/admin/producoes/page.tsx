@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { SiteShell } from '@/components/site-shell';
 import { requireAdminPage } from '@/lib/admin';
-import { getAdminProductions } from '@/lib/productions/queries';
+import { getAdminProductions, getUpcomingProductions } from '@/lib/productions/queries';
 import { PRODUCTION_STATUS_LABELS, PRODUCTION_TYPE_LABELS } from '@/lib/productions/types';
 
 export const dynamic = 'force-dynamic';
@@ -37,7 +37,10 @@ export default async function AdminProductionsPage() {
     );
   }
 
-  const { productions, error } = await getAdminProductions();
+  const [{ productions, error }, upcomingResult] = await Promise.all([
+    getAdminProductions(),
+    getUpcomingProductions(),
+  ]);
 
   if (error) {
     return (
@@ -53,7 +56,7 @@ export default async function AdminProductionsPage() {
 
   const active = productions.filter((item) => !['completed', 'cancelled', 'archived'].includes(item.status));
   const casting = productions.filter((item) => item.status === 'casting');
-  const upcoming = productions.filter((item) => item.starts_at && new Date(item.starts_at).getTime() >= Date.now()).slice(0, 5);
+  const upcoming = upcomingResult.error ? [] : upcomingResult.productions;
 
   return (
     <SiteShell>
