@@ -15,6 +15,22 @@ export async function getAdminProductions() {
   };
 }
 
+export async function getUpcomingProductions(limit = 5) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('productions')
+    .select('*')
+    .gte('starts_at', new Date().toISOString())
+    .not('status', 'in', '(completed,cancelled,archived)')
+    .order('starts_at', { ascending: true })
+    .limit(limit);
+
+  return {
+    productions: (data ?? []) as Production[],
+    error,
+  };
+}
+
 export async function getAdminProduction(id: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
