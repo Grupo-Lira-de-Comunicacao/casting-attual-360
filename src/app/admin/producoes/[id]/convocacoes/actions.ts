@@ -4,7 +4,12 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAdminAction } from '@/lib/admin';
 import { createClient } from '@/lib/supabase/server';
-import { CASTING_CALL_STATUSES, type CastingCallStatus } from '@/lib/casting-calls/types';
+import {
+  CASTING_CALL_STATUSES,
+  CASTING_REQUIREMENT_TYPES,
+  type CastingCallStatus,
+  type CastingRequirementType,
+} from '@/lib/casting-calls/types';
 
 const STATUS_TRANSITIONS: Record<CastingCallStatus, CastingCallStatus[]> = {
   draft: ['open', 'cancelled'],
@@ -99,6 +104,91 @@ export async function createCastingCall(productionId: string, formData: FormData
   redirect(`/admin/producoes/${productionId}/convocacoes/${data.id}?created=1&integration=${integrationError ? 'warning' : 'queued'}`);
 }
 
+export async function addCastingRequirement(productionId: string, castingCallId: string, formData: FormData) {
+  const authorization = await requireAdminAction();
+  if (!authorization.ok) redirect(`/admin/producoes/${productionId}/convocacoes/${castingCallId}?requirement_error=unauthorized`);
+
+  const requirementType = String(formData.get('requirement_type') ?? '') as CastingRequirementType;
+  const label = text(formData, 'label');
+  const valueText = text(formData, 'value_text');
+  const minRaw = text(formData, 'min_value');
+  const maxRaw = text(formData, 'max_value');
+  const weight = Number(text(formData, 'weight') ?? '100');
+  const minValue = minRaw === null ? null : Number(minRaw.replace(',', '.'));
+  const maxValue = maxRaw === null ? null : Number(maxRaw.replace(',', '.'));
+
+  const invalidRange = minValue !== null && maxValue !== null && maxValue < minValue;
+  if (
+    !CASTING_REQUIREMENT_TYPES.includes(requirementType) ||
+    !label ||
+    label.length < 2 ||
+    !Number.isInteger(weight) ||
+    weight < 0 ||
+    weight > 100 ||
+    (minValue !== null && !Number.isFinite(minValue)) ||
+    (maxValue !== null && !Number.isFinite(maxValue)) ||
+    invalidRange
+  ) {
+    redirect(`/admin/producoes/${productionId}/convocacoes/${castingCallId}?requirement_error=invalid`);
+  }
+
+  const supabase = await createClient();
+  const { data: call } = await supabase
+    .from('casting_calls')
+    .select('id, status')
+    .eq('id', castingCallId)
+    .eq('production_id', productionId)
+    .single();
+
+  if (!call?.id || call.status === 'closed' || call.status === 'cancelled') {
+    redirect(`/admin/producoes/${productionId}/convocacoes/${castingCallId}?requirement_error=locked`);
+  }
+
+  const { error } = await supabase.from('casting_requirements').insert({
+    casting_call_id: castingCallId,
+    requirement_type: requirementType,
+    label,
+    value_text: valueText,
+    min_value: minValue,
+    max_value: maxValue,
+    is_required: formData.get('is_required') === 'on',
+    weight,
+  });
+
+  if (error) redirect(`/admin/producoes/${productionId}/convocacoes/${castingCallId}?requirement_error=save`);
+
+  revalidatePath(`/admin/producoes/${productionId}/convocacoes/${castingCallId}`);
+  redirect(`/admin/producoes/${productionId}/convocacoes/${castingCallId}?requirement_added=1`);
+}
+
+export async function deleteCastingRequirement(productionId: string, castingCallId: string, requirementId: string) {
+  const authorization = await requireAdminAction();
+  if (!authorization.ok) redirect(`/admin/producoes/${productionId}/convocacoes/${castingCallId}?requirement_error=unauthorized`);
+
+  const supabase = await createClient();
+  const { data: call } = await supabase
+    .from('casting_calls')
+    .select('id, status')
+    .eq('id', castingCallId)
+    .eq('production_id', productionId)
+    .single();
+
+  if (!call?.id || call.status === 'closed' || call.status === 'cancelled') {
+    redirect(`/admin/producoes/${productionId}/convocacoes/${castingCallId}?requirement_error=locked`);
+  }
+
+  const { error } = await supabase
+    .from('casting_requirements')
+    .delete()
+    .eq('id', requirementId)
+    .eq('casting_call_id', castingCallId);
+
+  if (error) redirect(`/admin/producoes/${productionId}/convocacoes/${castingCallId}?requirement_error=delete`);
+
+  revalidatePath(`/admin/producoes/${productionId}/convocacoes/${castingCallId}`);
+  redirect(`/admin/producoes/${productionId}/convocacoes/${castingCallId}?requirement_deleted=1`);
+}
+
 export async function changeCastingCallStatus(productionId: string, castingCallId: string, formData: FormData) {
   const authorization = await requireAdminAction();
   if (!authorization.ok) redirect(`/admin/producoes/${productionId}/convocacoes/${castingCallId}?status_error=unauthorized`);
@@ -107,11 +197,28 @@ export async function changeCastingCallStatus(productionId: string, castingCallI
   if (!CASTING_CALL_STATUSES.includes(targetStatus)) redirect(`/admin/producoes/${productionId}/convocacoes/${castingCallId}?status_error=invalid`);
 
   const supabase = await createClient();
-  const { data: current } = await supabase.from('casting_calls').select('status').eq('id', castingCallId).eq('production_id', productionId).single();
+  const { data: current } = await supabase
+    .from('casting_calls')
+    .select('status')
+    .eq('id', castingCallId)
+    .eq('production_id', productionId)
+    .single();
   if (!current?.status) redirect(`/admin/producoes/${productionId}/convocacoes/${castingCallId}?status_error=load`);
 
   const currentStatus = current.status as CastingCallStatus;
   if (!STATUS_TRANSITIONS[currentStatus]?.includes(targetStatus)) redirect(`/admin/producoes/${productionId}/convocacoes/${castingCallId}?status_error=transition`);
+
+  if (targetStatus === 'open') {
+    const { count, error: requirementsError } = await supabase
+      .from('casting_requirements')
+      .select('id', { count: 'exact', head: true })
+      .eq('casting_call_id', castingCallId)
+      .eq('is_required', true);
+
+    if (requirementsError || !count || count < 1) {
+      redirect(`/admin/producoes/${productionId}/convocacoes/${castingCallId}?status_error=requirements`);
+    }
+  }
 
   const now = new Date().toISOString();
   const { data, error } = await supabase
