@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { linkTelegramInvitation } from "@/lib/telegram/linking";
+import { respondToCastingInvitation } from "@/lib/telegram/responses";
 
 type TelegramUser = {
   id?: number;
@@ -21,9 +22,17 @@ type TelegramMessage = {
   text?: string;
 };
 
+type TelegramCallbackQuery = {
+  id?: string;
+  from?: TelegramUser;
+  data?: string;
+  message?: TelegramMessage;
+};
+
 type TelegramUpdate = {
   update_id?: number;
   message?: TelegramMessage;
+  callback_query?: TelegramCallbackQuery;
 };
 
 type ParsedCommand = {
@@ -101,22 +110,28 @@ async function registerIntegrationEvent(
     return;
   }
 
-  const message = update.message;
+  const message = update.message ?? update.callback_query?.message;
+  const actor = update.message?.from ?? update.callback_query?.from;
   const { error } = await supabase.from("integration_events").insert({
-    event_type: command ? "telegram.command.received" : "telegram.update.received",
+    event_type: update.callback_query
+      ? "telegram.callback.received"
+      : command
+        ? "telegram.command.received"
+        : "telegram.update.received",
     source_system: "telegram",
     target_system: "casting-attual-360",
     payload: {
       update_id: update.update_id,
       command,
+      callback_data: update.callback_query?.data,
       message_id: message?.message_id,
       chat_id: message?.chat?.id,
       chat_type: message?.chat?.type,
-      telegram_user_id: message?.from?.id,
-      telegram_username: message?.from?.username,
-      primeiro_nome: message?.from?.first_name,
-      ultimo_nome: message?.from?.last_name,
-      idioma: message?.from?.language_code,
+      telegram_user_id: actor?.id,
+      telegram_username: actor?.username,
+      primeiro_nome: actor?.first_name,
+      ultimo_nome: actor?.last_name,
+      idioma: actor?.language_code,
     },
   });
 
@@ -272,6 +287,39 @@ async function sendTelegramMessage(token: string, chatId: number, text: string) 
   }
 }
 
+async function answerCallbackQuery(token: string, callbackQueryId: string, text: string) {
+  const response = await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ callback_query_id: callbackQueryId, text }),
+  });
+
+  if (!response.ok) {
+    console.error(`Telegram answerCallbackQuery failed with status ${response.status}.`);
+  }
+}
+
+async function handleInvitationCallback(token: string, update: TelegramUpdate) {
+  const callback = update.callback_query;
+  if (!callback?.id || !callback.data || !callback.from?.id) return false;
+  if (!callback.data.startsWith("invitation_")) return false;
+
+  const result = await respondToCastingInvitation(callback.data, {
+    userId: callback.from.id,
+    chatId: callback.message?.chat?.id ?? null,
+  });
+
+  const message = result.ok ? result.message : result.error;
+  await answerCallbackQuery(token, callback.id, message);
+
+  const chatId = callback.message?.chat?.id;
+  if (chatId !== undefined) {
+    await sendTelegramMessage(token, chatId, message);
+  }
+
+  return true;
+}
+
 export async function POST(request: Request) {
   try {
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -294,12 +342,16 @@ export async function POST(request: Request) {
     }
 
     const update = (await request.json()) as TelegramUpdate;
-    const chatId = update.message?.chat?.id;
     const command = parseCommand(update.message?.text);
     const supabase = createServerSupabase();
 
     await registerIntegrationEvent(supabase, update, command.name);
 
+    if (await handleInvitationCallback(token, update)) {
+      return NextResponse.json({ ok: true }, { status: 200 });
+    }
+
+    const chatId = update.message?.chat?.id;
     let reply = getReply(command.name);
     if (command.name === "/start") {
       reply = (await linkInvitationFromStart(update, command.args[0])) ?? START_MESSAGE;
