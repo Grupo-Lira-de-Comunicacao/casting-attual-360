@@ -117,7 +117,7 @@ export async function createProduction(_previousState: ProductionActionState, fo
   if (!authorization.ok) return { ok: false, error: authorization.error };
 
   const parsed = validateProductionForm(formData);
-  if ('error' in parsed) return { ok: false, error: parsed.error };
+  if ('error' in parsed) return { ok: false, error: parsed.error ?? 'Dados da produção inválidos.' };
 
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getUser();
@@ -149,7 +149,7 @@ export async function updateProduction(productionId: string, _previousState: Pro
   if (!authorization.ok) return { ok: false, error: authorization.error };
 
   const parsed = validateProductionForm(formData);
-  if ('error' in parsed) return { ok: false, error: parsed.error };
+  if ('error' in parsed) return { ok: false, error: parsed.error ?? 'Dados da produção inválidos.' };
 
   const supabase = await createClient();
   const { data, error } = await supabase
