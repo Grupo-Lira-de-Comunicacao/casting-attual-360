@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireAdminPage } from '@/lib/admin';
-import { getProductionById } from '@/lib/productions/queries';
-import { getCastingCallsForProduction } from '@/lib/casting-calls/queries';
+import { getAdminProduction } from '@/lib/productions/queries';
+import { getCastingCallsByProduction } from '@/lib/casting-calls/queries';
 
 const statusLabels: Record<string, string> = {
   draft: 'Rascunho',
@@ -15,9 +15,9 @@ const statusLabels: Record<string, string> = {
 export default async function CastingCallsPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdminPage();
   const { id } = await params;
-  const [production, calls] = await Promise.all([
-    getProductionById(id),
-    getCastingCallsForProduction(id),
+  const [{ production }, { castingCalls: calls }] = await Promise.all([
+    getAdminProduction(id),
+    getCastingCallsByProduction(id),
   ]);
 
   if (!production) notFound();
