@@ -1,5 +1,5 @@
-import Image from 'next/image';
-import { demoTalents } from '@/data/demo-data';
+import { TalentImage } from '@/components/talent-image';
+import type { PublicTalent } from '@/types/talent';
 
 export function MediaGlyph({ type }: { type: 'play' | 'camera' | 'signal' | 'people' }) {
   const paths = {
@@ -12,7 +12,13 @@ export function MediaGlyph({ type }: { type: 'play' | 'camera' | 'signal' | 'peo
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">{paths[type]}</svg>;
 }
 
-export function PlatformPreview() {
+export function PlatformPreview({ talents }: { talents: PublicTalent[] }) {
+  const primaryTalent = talents[0];
+
+  if (!primaryTalent) {
+    return <div className="min-h-80 rounded-[30px] border border-white/15 bg-[#092746]/85 p-8 text-center text-slate-300">Novos talentos em breve.</div>;
+  }
+
   return (
     <div className="relative mx-auto w-full max-w-[570px] lg:mr-0">
       <div className="absolute -inset-8 rounded-full bg-teal/20 blur-3xl" />
@@ -23,12 +29,12 @@ export function PlatformPreview() {
         </div>
         <div className="grid grid-cols-[1.15fr_.85fr] gap-3 pt-3">
           <div className="relative min-h-64 overflow-hidden rounded-2xl sm:min-h-80">
-            <Image src={demoTalents[0].image} alt="Prévia demonstrativa da plataforma" fill priority sizes="420px" className="object-cover" />
+            <TalentImage src={primaryTalent.image} alt={`Prévia de ${primaryTalent.name}`} priority sizes="420px" />
             <div className="absolute inset-0 bg-gradient-to-t from-navy via-transparent to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 p-4"><p className="font-bold">{demoTalents[0].name}</p><p className="text-sm text-white/65">{demoTalents[0].category} · {demoTalents[0].location}</p></div>
+            <div className="absolute inset-x-0 bottom-0 p-4"><p className="font-bold">{primaryTalent.name}</p><p className="text-sm text-white/65">{primaryTalent.category} · {primaryTalent.location}</p></div>
           </div>
           <div className="grid gap-3">
-            {demoTalents.slice(1).map((talent) => <div key={talent.slug} className="relative overflow-hidden rounded-2xl"><Image src={talent.image} alt="" fill sizes="180px" className="object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-navy/80 to-transparent" /></div>)}
+            {talents.slice(1, 3).map((talent) => <div key={talent.slug} className="relative overflow-hidden rounded-2xl"><TalentImage src={talent.image} alt={`Prévia de ${talent.name}`} sizes="180px" /><div className="absolute inset-0 bg-gradient-to-t from-navy/80 to-transparent" /></div>)}
           </div>
         </div>
       </div>

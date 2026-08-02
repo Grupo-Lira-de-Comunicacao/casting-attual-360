@@ -1,10 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { Talent } from '@/data/demo-data';
+import type { PublicTalent } from '@/types/talent';
 import { TalentCard } from '@/components/talent-card';
 
-export function TalentCatalog({ talents }: { talents: Talent[] }) {
+export function TalentCatalog({ talents }: { talents: PublicTalent[] }) {
   const [category, setCategory] = useState('Todos');
   const [query, setQuery] = useState('');
   const categories = ['Todos', ...Array.from(new Set(talents.map((talent) => talent.category)))];
@@ -38,7 +38,7 @@ export function TalentCatalog({ talents }: { talents: Talent[] }) {
           {filteredTalents.map((talent) => <TalentCard key={talent.slug} talent={talent} />)}
         </div>
       ) : (
-        <div className="rounded-[26px] border border-white/10 bg-white/[0.04] p-10 text-center text-slate-300">Nenhum perfil demonstrativo corresponde aos filtros selecionados.</div>
+        <div className="rounded-[26px] border border-white/10 bg-white/[0.04] p-10 text-center text-slate-300">Nenhum perfil corresponde aos filtros selecionados.</div>
       )}
     </div>
   );

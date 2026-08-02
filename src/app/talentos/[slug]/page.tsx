@@ -1,16 +1,14 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { SiteShell } from '@/components/site-shell';
-import { demoTalents } from '@/data/demo-data';
+import { TalentImage } from '@/components/talent-image';
+import { getPublicTalentBySlug } from '@/lib/talents/queries';
 
-export function generateStaticParams() {
-  return demoTalents.map((talent) => ({ slug: talent.slug }));
-}
+export const dynamic = 'force-dynamic';
 
 export default async function TalentDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const talent = demoTalents.find((item) => item.slug === slug);
+  const { talent } = await getPublicTalentBySlug(slug);
 
   if (!talent) notFound();
 
@@ -19,9 +17,9 @@ export default async function TalentDetailPage({ params }: { params: Promise<{ s
       <article className="overflow-hidden rounded-[32px] border border-white/10 bg-[#061b30] shadow-[0_28px_90px_-45px_rgba(25,199,197,0.65)]">
         <div className="grid lg:grid-cols-[0.92fr_1.08fr]">
           <div className="relative min-h-[430px] lg:min-h-[620px]">
-            <Image src={talent.gallery[0]} alt={`Retrato demonstrativo de ${talent.name}`} fill priority sizes="(min-width: 1024px) 46vw, 100vw" className="object-cover" />
+            <TalentImage src={talent.image} alt={`Retrato de ${talent.name}`} priority sizes="(min-width: 1024px) 46vw, 100vw" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#061b30] via-transparent to-transparent lg:bg-gradient-to-r lg:from-transparent lg:to-[#061b30]/25" />
-            <span className="absolute left-5 top-5 rounded-full bg-gold px-4 py-2 text-xs font-black text-navy">PERFIL DEMONSTRATIVO</span>
+            {talent.isDemo && <span className="absolute left-5 top-5 rounded-full bg-gold px-4 py-2 text-xs font-black text-navy">PERFIL DEMONSTRATIVO</span>}
           </div>
 
           <div className="flex flex-col justify-center p-7 sm:p-10 lg:p-14">
@@ -52,12 +50,12 @@ export default async function TalentDetailPage({ params }: { params: Promise<{ s
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue">Portfólio visual</p>
               <h2 className="mt-2 text-3xl font-black text-white">Galeria de apresentação</h2>
             </div>
-            <p className="max-w-xl text-sm leading-6 text-slate-400">Conteúdo e imagens fictícios, criados exclusivamente para demonstrar a experiência do catálogo.</p>
+            <p className="max-w-xl text-sm leading-6 text-slate-400">{talent.isDemo ? 'Conteúdo e imagens fictícios, criados exclusivamente para demonstrar a experiência do catálogo.' : 'Imagem disponibilizada e controlada pela equipe do Casting Attual 360.'}</p>
           </div>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {talent.gallery.map((image, index) => (
               <div key={image} className="relative aspect-[4/5] overflow-hidden rounded-[22px] border border-white/10 bg-white/5">
-                <Image src={image} alt={`Foto demonstrativa ${index + 1} de ${talent.name}`} fill sizes="(min-width: 1024px) 22vw, (min-width: 640px) 45vw, 100vw" className="object-cover transition duration-500 hover:scale-[1.03]" />
+                <TalentImage src={image} alt={`Foto ${index + 1} de ${talent.name}`} sizes="(min-width: 1024px) 22vw, (min-width: 640px) 45vw, 100vw" className="object-cover transition duration-500 hover:scale-[1.03]" />
               </div>
             ))}
           </div>

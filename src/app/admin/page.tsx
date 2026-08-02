@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { RequestManagement } from '@/components/admin/request-management';
 import { SiteShell } from '@/components/site-shell';
+import { requireAdminPage } from '@/lib/admin';
 import { createClient } from '@/lib/supabase/server';
 import type { RequestHistoryEntry, RequestRecord, RequestStatus } from '@/types/request';
 
@@ -18,6 +20,32 @@ async function signOut() {
 }
 
 export default async function AdminPage() {
+  const access = await requireAdminPage('/admin');
+
+  if (!access.structureInstalled) {
+    return (
+      <SiteShell>
+        <section className="rounded-[28px] border border-amber-200 bg-amber-50 p-8 text-amber-950 shadow-soft">
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-700">Estrutura administrativa pendente</p>
+          <h1 className="mt-3 text-3xl font-black">A migration de talentos ainda não foi instalada</h1>
+          <p className="mt-4 max-w-3xl leading-7">Sua autenticação está válida, mas o painel exige também um registro correspondente em <code>public.admin_users</code>. Aplique a migration aprovada e autorize o primeiro administrador antes de usar as áreas de gestão.</p>
+        </section>
+      </SiteShell>
+    );
+  }
+
+  if (!access.isAdmin) {
+    return (
+      <SiteShell>
+        <section className="rounded-[28px] border border-red-200 bg-red-50 p-8 text-red-950 shadow-soft">
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-red-700">Acesso restrito</p>
+          <h1 className="mt-3 text-3xl font-black">Conta sem permissão administrativa</h1>
+          <p className="mt-4 leading-7">O usuário está autenticado, mas não possui um registro em <code>public.admin_users</code>.</p>
+        </section>
+      </SiteShell>
+    );
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/admin/login?next=/admin');
@@ -53,10 +81,11 @@ export default async function AdminPage() {
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white/70">Painel administrativo</p>
               <h1 className="mt-3 text-3xl font-black">Gestão completa de solicitações</h1>
               <p className="mt-3 max-w-2xl text-white/80">Corrija dados administrativos, atribua responsáveis e acompanhe cada alteração com auditoria.</p>
+              <Link href="/admin/talentos" className="mt-5 inline-flex rounded-full border border-white/25 bg-white/10 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-white/20">Gerenciar talentos</Link>
             </div>
             <form action={signOut}><button className="rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-white/20">Sair</button></form>
           </div>
-          <p className="mt-6 text-sm text-white/70">Usuário autenticado: {user.email}</p>
+          <p className="mt-6 text-sm text-white/70">Administrador autorizado: {user.email}</p>
         </section>
 
         {loadError ? (
