@@ -9,6 +9,13 @@ import { createClient } from '@/lib/supabase/server';
 const ALLOWED_SELECTIONS = ['suggested', 'shortlisted', 'removed'] as const;
 type AllowedSelection = (typeof ALLOWED_SELECTIONS)[number];
 
+const PROTECTED_SELECTIONS = new Set(['invited', 'accepted', 'declined']);
+const ALLOWED_TRANSITIONS: Record<string, readonly AllowedSelection[]> = {
+  suggested: ['shortlisted', 'removed'],
+  shortlisted: ['suggested', 'removed'],
+  removed: ['suggested'],
+};
+
 function shortlistPath(productionId: string, castingCallId: string) {
   return `/admin/producoes/${productionId}/convocacoes/${castingCallId}/shortlist`;
 }
@@ -51,6 +58,15 @@ export async function changeShortlistSelection(
   }
 
   const previousStatus = current.selection_status;
+  if (PROTECTED_SELECTIONS.has(previousStatus)) {
+    redirect(`${shortlistPath(productionId, castingCallId)}?error=protected_state`);
+  }
+
+  const allowedTargets = ALLOWED_TRANSITIONS[previousStatus] ?? [];
+  if (!allowedTargets.includes(target)) {
+    redirect(`${shortlistPath(productionId, castingCallId)}?error=invalid_transition`);
+  }
+
   const now = new Date().toISOString();
   const { data: updated, error } = await supabase
     .from('casting_shortlist')
@@ -61,6 +77,7 @@ export async function changeShortlistSelection(
     })
     .eq('id', shortlistId)
     .eq('casting_call_id', castingCallId)
+    .eq('selection_status', previousStatus)
     .select('id, talent_id, selection_status')
     .single();
 
