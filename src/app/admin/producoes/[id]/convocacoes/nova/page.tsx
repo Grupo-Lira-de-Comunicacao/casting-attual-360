@@ -11,8 +11,8 @@ export default async function NewCastingCallPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  await requireAdminPage();
   const { id } = await params;
+  await requireAdminPage(`/admin/producoes/${id}/convocacoes/nova`);
   const { error } = await searchParams;
   const { production } = await getAdminProduction(id);
 
