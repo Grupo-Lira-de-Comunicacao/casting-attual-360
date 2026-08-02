@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAdminAction } from '@/lib/admin';
 import { generateCastingShortlist } from '@/lib/matching/generate';
+import { prepareCastingInvitation } from '@/lib/telegram/invitations';
+import { sendCastingInvitation } from '@/lib/telegram/delivery';
 import { createClient } from '@/lib/supabase/server';
 
 const ALLOWED_SELECTIONS = ['suggested', 'shortlisted', 'removed'] as const;
@@ -29,6 +31,49 @@ export async function generateShortlistAction(productionId: string, castingCallI
 
   revalidatePath(shortlistPath(productionId, castingCallId));
   redirect(`${shortlistPath(productionId, castingCallId)}?generated=1&integration=${result.integrationWarning ? 'warning' : 'queued'}`);
+}
+
+export async function prepareAndSendInvitationAction(
+  productionId: string,
+  castingCallId: string,
+  shortlistId: string,
+) {
+  const authorization = await requireAdminAction();
+  if (!authorization.ok) redirect(`${shortlistPath(productionId, castingCallId)}?error=unauthorized`);
+
+  const supabase = await createClient();
+  const { data: authData } = await supabase.auth.getUser();
+  const { data: item } = await supabase
+    .from('casting_shortlist')
+    .select('id, selection_status, casting_calls!inner(id, production_id)')
+    .eq('id', shortlistId)
+    .eq('casting_call_id', castingCallId)
+    .single();
+
+  const linkedCall = Array.isArray(item?.casting_calls) ? item?.casting_calls[0] : item?.casting_calls;
+  if (!item?.id || !linkedCall || linkedCall.production_id !== productionId) {
+    redirect(`${shortlistPath(productionId, castingCallId)}?error=not_found`);
+  }
+  if (item.selection_status !== 'shortlisted') {
+    redirect(`${shortlistPath(productionId, castingCallId)}?error=invalid_invitation_state`);
+  }
+
+  const prepared = await prepareCastingInvitation(shortlistId, authData.user?.id ?? null);
+  if (!prepared.ok) redirect(`${shortlistPath(productionId, castingCallId)}?error=prepare_invitation`);
+
+  if (prepared.status === 'pending_link') {
+    const params = new URLSearchParams({ invitation: 'pending_link' });
+    if (prepared.deepLink) params.set('deep_link', prepared.deepLink);
+    if (prepared.integrationWarning) params.set('integration', 'warning');
+    revalidatePath(shortlistPath(productionId, castingCallId));
+    redirect(`${shortlistPath(productionId, castingCallId)}?${params.toString()}`);
+  }
+
+  const sent = await sendCastingInvitation(prepared.invitationId);
+  if (!sent.ok) redirect(`${shortlistPath(productionId, castingCallId)}?error=send_invitation`);
+
+  revalidatePath(shortlistPath(productionId, castingCallId));
+  redirect(`${shortlistPath(productionId, castingCallId)}?invitation=sent&integration=${prepared.integrationWarning || sent.integrationWarning ? 'warning' : 'queued'}`);
 }
 
 export async function changeShortlistSelection(
