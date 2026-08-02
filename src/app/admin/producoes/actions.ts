@@ -94,6 +94,24 @@ async function enqueueProductionEvent(
   });
 }
 
+function normalizeProductionEventData(data: {
+  id?: string;
+  name?: string;
+  production_type?: string;
+  status?: string;
+  starts_at?: string | null;
+}) {
+  if (!data.id || !data.name || !data.production_type || !data.status) return null;
+
+  return {
+    id: data.id,
+    name: data.name,
+    production_type: data.production_type,
+    status: data.status,
+    starts_at: data.starts_at ?? null,
+  };
+}
+
 export async function createProduction(_previousState: ProductionActionState, formData: FormData): Promise<ProductionActionState> {
   const authorization = await requireAdminAction();
   if (!authorization.ok) return { ok: false, error: authorization.error };
@@ -115,7 +133,11 @@ export async function createProduction(_previousState: ProductionActionState, fo
     return { ok: false, error: error?.code === '23505' ? 'Já existe uma produção com esse slug.' : 'Não foi possível criar a produção.' };
   }
 
-  const { error: integrationError } = await enqueueProductionEvent(supabase, 'casting.production.created', data);
+  const eventData = normalizeProductionEventData(data);
+  const integrationResult = eventData
+    ? await enqueueProductionEvent(supabase, 'casting.production.created', eventData)
+    : { error: new Error('Dados obrigatórios da produção ausentes para integração.') };
+  const integrationError = integrationResult.error;
 
   revalidatePath('/admin/producoes');
   revalidatePath(`/admin/producoes/${data.id}`);
@@ -141,7 +163,12 @@ export async function updateProduction(productionId: string, _previousState: Pro
     return { ok: false, error: error?.code === '23505' ? 'Já existe uma produção com esse slug.' : 'Não foi possível salvar as alterações.' };
   }
 
-  const { error: integrationError } = await enqueueProductionEvent(supabase, 'casting.production.updated', data);
+  const eventData = normalizeProductionEventData(data);
+  const integrationResult = eventData
+    ? await enqueueProductionEvent(supabase, 'casting.production.updated', eventData)
+    : { error: new Error('Dados obrigatórios da produção ausentes para integração.') };
+  const integrationError = integrationResult.error;
+
   revalidatePath('/admin/producoes');
   revalidatePath(`/admin/producoes/${productionId}`);
   redirect(`/admin/producoes/${productionId}?updated=1&integration=${integrationError ? 'warning' : 'queued'}`);
@@ -177,10 +204,14 @@ export async function changeProductionStatus(productionId: string, formData: For
   if (error || !data) redirect(`/admin/producoes/${productionId}?status_error=save`);
 
   const eventType = targetStatus === 'archived' ? 'casting.production.archived' : 'casting.production.status_changed';
-  const { error: integrationError } = await enqueueProductionEvent(supabase, eventType, data, {
-    previous_status: currentStatus,
-    current_status: targetStatus,
-  });
+  const eventData = normalizeProductionEventData(data);
+  const integrationResult = eventData
+    ? await enqueueProductionEvent(supabase, eventType, eventData, {
+        previous_status: currentStatus,
+        current_status: targetStatus,
+      })
+    : { error: new Error('Dados obrigatórios da produção ausentes para integração.') };
+  const integrationError = integrationResult.error;
 
   revalidatePath('/admin/producoes');
   revalidatePath(`/admin/producoes/${productionId}`);
