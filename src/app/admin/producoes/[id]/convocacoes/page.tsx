@@ -13,8 +13,8 @@ const statusLabels: Record<string, string> = {
 };
 
 export default async function CastingCallsPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdminPage();
   const { id } = await params;
+  await requireAdminPage(`/admin/producoes/${id}/convocacoes`);
   const [{ production }, { castingCalls: calls }] = await Promise.all([
     getAdminProduction(id),
     getCastingCallsByProduction(id),
