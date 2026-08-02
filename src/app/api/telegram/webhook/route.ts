@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { linkTelegramInvitation } from "@/lib/telegram/linking";
 
 type TelegramUser = {
   id?: number;
@@ -38,12 +39,18 @@ const START_MESSAGE = [
   "Use /ajuda para consultar os comandos disponíveis.",
 ].join("\n");
 
+const LINKED_INVITATION_MESSAGE = [
+  "Telegram vinculado com sucesso ao Casting Attual 360.",
+  "",
+  "Seu convite está pronto para a próxima etapa. Você receberá por aqui os detalhes e as opções de resposta.",
+].join("\n");
+
 const HELP_MESSAGE = [
   "Comandos disponíveis:",
   "/start — iniciar o atendimento",
   "/ajuda — ver esta lista",
   "/status — consultar o estágio atual da integração",
-  "/vincular CODIGO — conectar seu cadastro ao Telegram",
+  "/vincular CODIGO — conectar seu cadastro pelo fluxo legado",
 ].join("\n");
 
 const STATUS_MESSAGE =
@@ -235,6 +242,24 @@ async function linkTalentAccount(
   return "Cadastro vinculado com sucesso ao Casting Attual 360. A partir de agora você poderá receber avisos e convites por aqui.";
 }
 
+async function linkInvitationFromStart(update: TelegramUpdate, payload: string | undefined) {
+  if (!payload?.startsWith("invite_")) return null;
+
+  const telegramUserId = update.message?.from?.id;
+  const telegramChatId = update.message?.chat?.id;
+  if (!telegramUserId || !telegramChatId) {
+    return "Não foi possível identificar sua conta do Telegram.";
+  }
+
+  const result = await linkTelegramInvitation(payload, {
+    userId: telegramUserId,
+    chatId: telegramChatId,
+    username: update.message?.from?.username ?? null,
+  });
+
+  return result.ok ? LINKED_INVITATION_MESSAGE : result.error;
+}
+
 async function sendTelegramMessage(token: string, chatId: number, text: string) {
   const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
@@ -276,6 +301,9 @@ export async function POST(request: Request) {
     await registerIntegrationEvent(supabase, update, command.name);
 
     let reply = getReply(command.name);
+    if (command.name === "/start") {
+      reply = (await linkInvitationFromStart(update, command.args[0])) ?? START_MESSAGE;
+    }
     if (command.name === "/vincular") {
       reply = await linkTalentAccount(supabase, update, command.args[0]);
     }
