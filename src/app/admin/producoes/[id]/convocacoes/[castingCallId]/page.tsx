@@ -40,8 +40,8 @@ export default async function CastingCallDetailPage({
   params: Promise<{ id: string; castingCallId: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireAdminPage();
   const { id, castingCallId } = await params;
+  await requireAdminPage(`/admin/producoes/${id}/convocacoes/${castingCallId}`);
   const query = await searchParams;
   const [{ production }, { castingCall }] = await Promise.all([
     getAdminProduction(id),
