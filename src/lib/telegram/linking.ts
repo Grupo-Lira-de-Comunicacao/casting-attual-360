@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { CASTING_EVENT_TYPES, castingIntegrationEvent } from '@/lib/integrations/casting-events';
 
 const START_PREFIX = 'invite_';
 
@@ -113,25 +114,23 @@ export async function linkTelegramInvitation(
     return { ok: false, error: 'Telegram vinculado, mas o convite não pôde ser liberado.' };
   }
 
-  const { error: integrationError } = await supabase.from('integration_events').insert({
-    event_type: 'casting.telegram.linked',
-    source_system: 'casting-attual-360',
-    target_system: 'attual-one',
-    production_id: castingCall.production_id,
-    casting_call_id: invitation.casting_call_id,
-    shortlist_id: invitation.shortlist_id,
-    invitation_id: invitation.id,
-    payload: {
-      invitation_id: invitation.id,
-      casting_call_id: invitation.casting_call_id,
-      shortlist_id: invitation.shortlist_id,
-      production_id: castingCall.production_id,
-      talent_id: invitation.talent_id,
-      channel: 'telegram',
-      status: 'ready',
-      linked_at: now,
-    },
-  });
+  const { error: integrationError } = await supabase.from('integration_events').insert(
+    castingIntegrationEvent(
+      CASTING_EVENT_TYPES.telegramLinked,
+      {
+        productionId: castingCall.production_id,
+        castingCallId: invitation.casting_call_id,
+        shortlistId: invitation.shortlist_id,
+        invitationId: invitation.id,
+        talentId: invitation.talent_id,
+      },
+      {
+        channel: 'telegram',
+        status: 'ready',
+        linked_at: now,
+      },
+    ),
+  );
 
   return {
     ok: true,
