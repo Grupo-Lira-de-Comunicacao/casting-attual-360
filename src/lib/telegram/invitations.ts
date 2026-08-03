@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { createClient } from '@/lib/supabase/server';
+import { CASTING_EVENT_TYPES, castingIntegrationEvent } from '@/lib/integrations/casting-events';
 
 const INVITATION_TTL_HOURS = 24;
 const START_PREFIX = 'invite_';
@@ -112,27 +113,25 @@ export async function prepareCastingInvitation(
     return { ok: false, error: 'Não foi possível preparar o convite.' };
   }
 
-  const { error: integrationError } = await supabase.from('integration_events').insert({
-    event_type: 'casting.invitation.prepared',
-    source_system: 'casting-attual-360',
-    target_system: 'attual-one',
-    production_id: castingCall.production_id,
-    casting_call_id: shortlist.casting_call_id,
-    shortlist_id: shortlist.id,
-    invitation_id: invitation.id,
-    payload: {
-      invitation_id: invitation.id,
-      shortlist_id: shortlist.id,
-      casting_call_id: shortlist.casting_call_id,
-      production_id: castingCall.production_id,
-      talent_id: shortlist.talent_id,
-      channel: 'telegram',
-      status,
-      telegram_linked: Boolean(telegramLink?.id),
-      token_expires_at: expiresAt,
-      prepared_at: now,
-    },
-  });
+  const { error: integrationError } = await supabase.from('integration_events').insert(
+    castingIntegrationEvent(
+      CASTING_EVENT_TYPES.invitationPrepared,
+      {
+        productionId: castingCall.production_id,
+        castingCallId: shortlist.casting_call_id,
+        shortlistId: shortlist.id,
+        invitationId: invitation.id,
+        talentId: shortlist.talent_id,
+      },
+      {
+        channel: 'telegram',
+        status,
+        telegram_linked: Boolean(telegramLink?.id),
+        token_expires_at: expiresAt,
+        prepared_at: now,
+      },
+    ),
+  );
 
   return {
     ok: true,

@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { CASTING_EVENT_TYPES, castingIntegrationEvent } from '@/lib/integrations/casting-events';
 
 type TelegramCallbackIdentity = {
   userId: number;
@@ -92,27 +93,26 @@ export async function respondToCastingInvitation(
     .eq('selection_status', 'invited');
 
   const eventType = parsed.status === 'accepted'
-    ? 'casting.invitation.accepted'
-    : 'casting.invitation.declined';
+    ? CASTING_EVENT_TYPES.invitationAccepted
+    : CASTING_EVENT_TYPES.invitationDeclined;
 
-  const { error: integrationError } = await supabase.from('integration_events').insert({
-    event_type: eventType,
-    source_system: 'casting-attual-360',
-    target_system: 'attual-one',
-    production_id: castingCall.production_id,
-    casting_call_id: invitation.casting_call_id,
-    shortlist_id: invitation.shortlist_id,
-    invitation_id: invitation.id,
-    payload: {
-      invitation_id: invitation.id,
-      talent_id: invitation.talent_id,
-      casting_call_id: invitation.casting_call_id,
-      production_id: castingCall.production_id,
-      status: parsed.status,
-      response_source: 'telegram',
-      responded_at: respondedAt,
-    },
-  });
+  const { error: integrationError } = await supabase.from('integration_events').insert(
+    castingIntegrationEvent(
+      eventType,
+      {
+        productionId: castingCall.production_id,
+        castingCallId: invitation.casting_call_id,
+        shortlistId: invitation.shortlist_id,
+        invitationId: invitation.id,
+        talentId: invitation.talent_id,
+      },
+      {
+        status: parsed.status,
+        response_source: 'telegram',
+        responded_at: respondedAt,
+      },
+    ),
+  );
 
   return {
     ok: true,

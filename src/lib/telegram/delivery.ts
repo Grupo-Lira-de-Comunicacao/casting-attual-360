@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { CASTING_EVENT_TYPES, castingIntegrationEvent } from '@/lib/integrations/casting-events';
 
 type TelegramSendMessageResponse = {
   ok?: boolean;
@@ -131,24 +132,23 @@ export async function sendCastingInvitation(invitationId: string): Promise<SendC
     .eq('id', invitation.shortlist_id)
     .eq('selection_status', 'shortlisted');
 
-  const { error: integrationError } = await supabase.from('integration_events').insert({
-    event_type: 'casting.invitation.sent',
-    source_system: 'casting-attual-360',
-    target_system: 'attual-one',
-    production_id: castingCall.production_id,
-    casting_call_id: invitation.casting_call_id,
-    shortlist_id: invitation.shortlist_id,
-    invitation_id: invitation.id,
-    payload: {
-      invitation_id: invitation.id,
-      talent_id: invitation.talent_id,
-      casting_call_id: invitation.casting_call_id,
-      production_id: castingCall.production_id,
-      channel: 'telegram',
-      telegram_message_id: messageId,
-      sent_at: sentAt,
-    },
-  });
+  const { error: integrationError } = await supabase.from('integration_events').insert(
+    castingIntegrationEvent(
+      CASTING_EVENT_TYPES.invitationSent,
+      {
+        productionId: castingCall.production_id,
+        castingCallId: invitation.casting_call_id,
+        shortlistId: invitation.shortlist_id,
+        invitationId: invitation.id,
+        talentId: invitation.talent_id,
+      },
+      {
+        channel: 'telegram',
+        telegram_message_id: messageId,
+        sent_at: sentAt,
+      },
+    ),
+  );
 
   return {
     ok: true,
