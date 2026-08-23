@@ -2,20 +2,24 @@
 
 **Talentos, conexões e visibilidade.**
 
-Base da Fase 1 da plataforma institucional que conecta marcas, agências e talentos. A aplicação apresenta a identidade da Casting Attual 360, catálogo e perfis demonstrativos, pacotes, entradas de contato/cadastro e uma visão administrativa inicial.
+Plataforma do Grupo Lira de Comunicação para gestão de talentos, produções, convocações, matching, shortlist, convites Telegram e integração operacional com o ATTUAL ONE.
 
-> Escolha quem vai dar voz, imagem e alcance para sua marca.
+## Estado atual
 
-## Estado da Fase 1
+O projeto já ultrapassou a Fase 1 demonstrativa. A `main` atual contém:
 
-- Home institucional responsiva com proposta de valor, jornada, casting em destaque e chamadas por público;
-- catálogo e páginas estáticas de detalhes de talentos;
-- páginas de pacotes, empresas, cadastro de talentos e painel administrativo;
-- dados fictícios centralizados e identificados em `src/data/demo-data.ts`;
-- configuração de ambiente preparada para futura integração com Supabase;
-- TypeScript estrito, ESLint e build de produção configurados.
+- catálogo público de talentos com backend Supabase;
+- autenticação e painel administrativo;
+- cadastro e edição de talentos;
+- Produções;
+- Convocações e requisitos estruturados;
+- Matching e Shortlist;
+- vínculo e convites via Telegram;
+- fila de eventos de integração;
+- auditoria e métricas operacionais;
+- contratos de integração com o ATTUAL ONE.
 
-Os nomes, métricas, preços e demais informações exibidos atualmente são exclusivamente demonstrativos e não representam a operação real.
+O fallback demonstrativo continua no código apenas como mecanismo de contingência quando o backend público não está acessível. Em produção normal, o catálogo deve consumir os registros ativos do Supabase.
 
 ## Tecnologias
 
@@ -23,7 +27,9 @@ Os nomes, métricas, preços e demais informações exibidos atualmente são exc
 - React 19
 - TypeScript
 - Tailwind CSS
-- Estrutura preparada para Supabase
+- Supabase (PostgreSQL, Auth, Storage e RLS)
+- Vercel
+- Telegram Bot API
 
 ## Executar localmente
 
@@ -34,8 +40,6 @@ npm install
 npm run dev
 ```
 
-Acesse [http://localhost:3000](http://localhost:3000).
-
 ## Validação
 
 ```bash
@@ -44,7 +48,7 @@ npm run typecheck
 npm run build
 ```
 
-Ou execute tudo em sequência:
+Ou:
 
 ```bash
 npm run check
@@ -52,21 +56,34 @@ npm run check
 
 ## Supabase
 
-A integração ainda não está ativa. Para a próxima fase, crie um arquivo `.env.local` (não versionado) com:
+A aplicação usa o projeto Supabase de produção e espera, no mínimo:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 ```
 
-A configuração provisória está em `src/lib/supabase.ts` e deve ser substituída por um cliente oficial quando o projeto Supabase e o modelo de dados forem definidos.
+As migrations ficam em `supabase/migrations/` e incluem talentos, integrações, Produções, Convocações, Shortlist, Telegram, auditoria e métricas.
 
-## Rotas
+## Rotas principais
 
 - `/` — Home institucional
-- `/talentos` — catálogo demonstrativo
-- `/talentos/[slug]` — perfil demonstrativo
+- `/talentos` — catálogo público
+- `/talentos/[slug]` — perfil de talento
 - `/talentos/cadastrar` — entrada de cadastro
-- `/pacotes` — ofertas demonstrativas
-- `/empresas` — contato para marcas e agências
-- `/admin` — painel demonstrativo
+- `/pacotes` — soluções
+- `/empresas` — área para marcas e agências
+- `/admin` — painel administrativo
+- `/admin/producoes` — Produções
+- `/admin/integracoes/eventos` — eventos de integração
+- `/admin/integracoes/metricas` — métricas operacionais
+- `/api/telegram/webhook` — webhook Telegram
+- `/api/integrations/dispatch` — dispatcher de integrações
+
+## Deploy
+
+O projeto canônico está em:
+
+`Grupo-Lira-de-Comunicacao/casting-attual-360`
+
+A branch de produção é `main` e o projeto está conectado à Vercel.
