@@ -1,11 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
+import {
+  classifyDispatchFailure,
+  isRetryDue,
+  signedCastingHeaders,
+} from "@/lib/integrations/dispatch-policy";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_BATCH_SIZE = 20;
-const MAX_ATTEMPTS = 10;
+const MAX_ATTEMPTS = 7;
 const STALE_PROCESSING_MINUTES = 15;
 const MAX_RESPONSE_LENGTH = 2_000;
 
@@ -21,6 +27,7 @@ type IntegrationEvent = {
   payload: Record<string, unknown>;
   tentativas: number;
   criado_em: string;
+  atualizado_em: string;
 };
 
 function getServerConfig() {
@@ -146,20 +153,22 @@ export async function POST(request: NextRequest) {
   const { data, error } = await supabase
     .from("integration_events")
     .select(
-      "id,event_key,event_type,source_system,target_system,organization_external_id,project_external_id,talent_id,payload,tentativas,criado_em",
+      "id,event_key,event_type,source_system,target_system,organization_external_id,project_external_id,talent_id,payload,tentativas,criado_em,atualizado_em",
     )
     .eq("target_system", "attual-one")
     .in("status", ["pendente", "falhou"])
     .lt("tentativas", MAX_ATTEMPTS)
     .order("criado_em", { ascending: true })
-    .limit(MAX_BATCH_SIZE);
+    .limit(MAX_BATCH_SIZE * 5);
 
   if (error) {
     console.error("[dispatcher] falha ao consultar fila", error);
     return NextResponse.json({ error: "Falha ao consultar fila." }, { status: 500 });
   }
 
-  const events = (data ?? []) as IntegrationEvent[];
+  const events = ((data ?? []) as IntegrationEvent[])
+    .filter((event) => event.tentativas === 0 || isRetryDue(event.tentativas, event.atualizado_em))
+    .slice(0, MAX_BATCH_SIZE);
   const results: Array<{ id: string; status: "processado" | "falhou"; error?: string }> = [];
 
   for (const event of events) {
@@ -214,26 +223,35 @@ export async function POST(request: NextRequest) {
     let receivedPayload: Record<string, unknown> | null = null;
 
     try {
+      const body = JSON.stringify({
+        event_id: event.id,
+        event_key: event.event_key,
+        event_type: event.event_type,
+        event_version: 1,
+        source_system: event.source_system,
+        target_system: event.target_system,
+        organization_external_id: event.organization_external_id,
+        project_external_id: event.project_external_id,
+        talent_id: event.talent_id,
+        occurred_at: event.criado_em,
+        payload: event.payload,
+      });
+      const receiverPath = new URL(config.attualOneEventsUrl).pathname;
+
       const response = await fetch(config.attualOneEventsUrl, {
         method: "POST",
         headers: {
           "content-type": "application/json",
           authorization: `Bearer ${config.attualOneSecret}`,
           "idempotency-key": event.event_key,
+          ...signedCastingHeaders({
+            body,
+            eventKey: event.event_key,
+            path: receiverPath,
+            secret: config.attualOneSecret,
+          }),
         },
-        body: JSON.stringify({
-          event_id: event.id,
-          event_key: event.event_key,
-          event_type: event.event_type,
-          event_version: 1,
-          source_system: event.source_system,
-          target_system: event.target_system,
-          organization_external_id: event.organization_external_id,
-          project_external_id: event.project_external_id,
-          talent_id: event.talent_id,
-          occurred_at: event.criado_em,
-          payload: event.payload,
-        }),
+        body,
         signal: AbortSignal.timeout(10_000),
       });
 
@@ -277,10 +295,13 @@ export async function POST(request: NextRequest) {
       const message = errorMessage(dispatchError).slice(0, 1000);
       const finishedAt = new Date().toISOString();
 
+      const terminal =
+        classifyDispatchFailure(httpStatus) === "permanent" || nextAttempt >= MAX_ATTEMPTS;
+
       await Promise.all([
         supabase
           .from("integration_events")
-          .update({ status: "falhou", ultimo_erro: message })
+          .update({ status: terminal ? "cancelado" : "falhou", ultimo_erro: message })
           .eq("id", event.id),
         supabase
           .from("integration_event_attempts")
