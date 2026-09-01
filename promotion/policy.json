@@ -1,0 +1,45 @@
+{
+  "version": "1.0",
+  "pilot": "casting-attual-360",
+  "source_of_truth": "github",
+  "candidate_identity": "git_sha",
+  "stages": [
+    "source",
+    "ci",
+    "preview",
+    "promotion_gate",
+    "production",
+    "post_deploy_validation"
+  ],
+  "technical_gates": {
+    "lint": "required",
+    "typecheck": "required",
+    "build": "required",
+    "migration_safety": "required",
+    "preview_ready": "required",
+    "production_read_back": "required"
+  },
+  "human_approval": {
+    "technical_failure_override": false,
+    "business_scope": true,
+    "cost": true,
+    "destructive_change": true,
+    "break_glass": "N4_ROOT"
+  },
+  "rollback": {
+    "application": "previous_verified_deployment",
+    "database": "forward_fix_or_verified_restore",
+    "treat_as_same_operation": false
+  },
+  "break_glass": {
+    "normal_path": false,
+    "requires_reason": true,
+    "requires_expiry": true,
+    "requires_audit_event": true,
+    "requires_post_incident_reconciliation": true
+  },
+  "supersession": {
+    "delete_old_after_validation": true,
+    "retain_minimum_audit_evidence": true
+  }
+}
