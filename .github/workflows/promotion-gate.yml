@@ -1,0 +1,99 @@
+name: Promotion Gate (shadow)
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: Exact Git SHA to validate
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: promotion-gate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  candidate:
+    name: Validate promotion candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Resolve candidate
+        id: candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.candidate_sha }}" ]]; then
+            echo "sha=${{ inputs.candidate_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=${{ github.event.pull_request.head.sha || github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.candidate.outputs.sha }}
+          fetch-depth: 0
+
+      - name: Verify checked out SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ steps.candidate.outputs.sha }}"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Migration safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=50
+          python3 scripts/check_migration_safety.py --base-ref origin/main
+
+      - name: Promotion manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .promotion
+          cat > .promotion/candidate.json <<JSON
+          {
+            "candidate_sha": "$(git rev-parse HEAD)",
+            "source": "github",
+            "technical_gate": "passed",
+            "production_promoted": false,
+            "mode": "shadow"
+          }
+          JSON
+          cat .promotion/candidate.json
+
+      - name: Summary
+        shell: bash
+        run: |
+          {
+            echo "## ATLAS Promotion Gate — SHADOW"
+            echo ""
+            echo "Candidate: \`${{ steps.candidate.outputs.sha }}\`"
+            echo ""
+            echo "Technical validation passed. This workflow does **not** deploy production."
+          } >> "$GITHUB_STEP_SUMMARY"
