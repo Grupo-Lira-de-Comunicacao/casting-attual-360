@@ -1,4 +1,4 @@
-name: Promotion Gate (shadow)
+name: Promotion Gate
 
 on:
   pull_request:
@@ -20,7 +20,7 @@ jobs:
   candidate:
     name: Validate promotion candidate
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
 
     steps:
       - name: Resolve candidate
@@ -46,27 +46,6 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${{ steps.candidate.outputs.sha }}"
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Tests
-        run: npm test
-
-      - name: Build
-        run: npm run build
-
       - name: Migration safety
         shell: bash
         run: |
@@ -84,8 +63,9 @@ jobs:
             "candidate_sha": "$(git rev-parse HEAD)",
             "source": "github",
             "technical_gate": "passed",
+            "ci_required_separately": true,
             "production_promoted": false,
-            "mode": "shadow"
+            "mode": "enforcement"
           }
           JSON
           cat .promotion/candidate.json
@@ -94,9 +74,11 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## ATLAS Promotion Gate — SHADOW"
+            echo "## ATLAS Promotion Gate"
             echo ""
             echo "Candidate: \`${{ steps.candidate.outputs.sha }}\`"
             echo ""
-            echo "Technical validation passed. This workflow does **not** deploy production."
+            echo "Promotion-specific validation passed. CI remains a separate mandatory check for lint, typecheck, tests and build."
+            echo ""
+            echo "This workflow does **not** deploy production."
           } >> "$GITHUB_STEP_SUMMARY"
