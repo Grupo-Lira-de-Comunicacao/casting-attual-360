@@ -4,15 +4,35 @@ import { useMemo, useState } from 'react';
 import type { PublicTalent } from '@/types/talent';
 import { TalentCard } from '@/components/talent-card';
 
+const CATEGORY_FILTERS: Record<string, string[]> = {
+  Apresentador: ['apresentador', 'apresentadora', 'apresentacao'],
+  Audiovisual: ['audiovisual', 'videomaker', 'cinegrafista', 'video', 'captacao'],
+  Dança: ['danca', 'coreografo', 'coreografa'],
+  Fotografia: ['fotografia', 'fotografo', 'fotografa'],
+  Influêncer: ['influencer', 'influenciador', 'influenciadora', 'influencia'],
+  Jornalismo: ['jornalismo', 'jornalista'],
+  Locução: ['locucao', 'locutor', 'locutora'],
+  Moda: ['moda', 'modelo'],
+  Reporter: ['reporter', 'reportagem'],
+};
+
+const categories = ['Todos', ...Object.keys(CATEGORY_FILTERS)];
+
+function normalizeText(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('pt-BR');
+}
+
 export function TalentCatalog({ talents }: { talents: PublicTalent[] }) {
   const [category, setCategory] = useState('Todos');
   const [query, setQuery] = useState('');
-  const categories = ['Todos', ...Array.from(new Set(talents.flatMap((talent) => talent.categories))).sort((a, b) => a.localeCompare(b, 'pt-BR'))];
 
   const filteredTalents = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase('pt-BR');
+    const normalizedQuery = normalizeText(query.trim());
+
     return talents.filter((talent) => {
-      const matchesCategory = category === 'Todos' || talent.categories.includes(category);
       const searchable = [
         talent.name,
         talent.role,
@@ -22,8 +42,13 @@ export function TalentCatalog({ talents }: { talents: PublicTalent[] }) {
         ...talent.skills,
         ...talent.languages,
         ...talent.availabilityOptions,
-      ].join(' ').toLocaleLowerCase('pt-BR');
-      return matchesCategory && (!normalizedQuery || searchable.includes(normalizedQuery));
+      ].join(' ');
+
+      const normalizedSearchable = normalizeText(searchable);
+      const aliases = CATEGORY_FILTERS[category] ?? [];
+      const matchesCategory = category === 'Todos' || aliases.some((alias) => normalizedSearchable.includes(normalizeText(alias)));
+
+      return matchesCategory && (!normalizedQuery || normalizedSearchable.includes(normalizedQuery));
     });
   }, [category, query, talents]);
 
