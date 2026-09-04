@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   classifyDispatchFailure,
+  countsTowardCircuitBreaker,
   isRetryDue,
   signedCastingHeaders,
 } from "../src/lib/integrations/dispatch-policy.ts";
@@ -14,6 +15,18 @@ test("classifica falhas permanentes e transitorias", () => {
   assert.equal(classifyDispatchFailure(429), "transient");
   assert.equal(classifyDispatchFailure(500), "transient");
   assert.equal(classifyDispatchFailure(null), "transient");
+});
+
+test("contabiliza apenas falhas sistemicas no circuit breaker", () => {
+  assert.equal(countsTowardCircuitBreaker(null), true);
+  assert.equal(countsTowardCircuitBreaker(408), true);
+  assert.equal(countsTowardCircuitBreaker(429), true);
+  assert.equal(countsTowardCircuitBreaker(500), true);
+  assert.equal(countsTowardCircuitBreaker(503), true);
+  assert.equal(countsTowardCircuitBreaker(401), false);
+  assert.equal(countsTowardCircuitBreaker(403), false);
+  assert.equal(countsTowardCircuitBreaker(409), false);
+  assert.equal(countsTowardCircuitBreaker(422), false);
 });
 
 test("aplica backoff antes de liberar nova tentativa", () => {
