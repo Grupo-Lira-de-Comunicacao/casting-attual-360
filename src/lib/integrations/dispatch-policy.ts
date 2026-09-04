@@ -28,6 +28,33 @@ export function isRetryDue(
   return now >= Date.parse(updatedAt) + retryDelayMs(attempts, jitterKey);
 }
 
+export function retryAfterAt(raw: string | null, now = Date.now()) {
+  if (!raw) return null;
+
+  const value = raw.trim();
+  if (!value) return null;
+
+  if (/^\d+$/.test(value)) {
+    const seconds = Number(value);
+    if (!Number.isSafeInteger(seconds)) return null;
+    return new Date(now + seconds * 1_000).toISOString();
+  }
+
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) return null;
+
+  return new Date(Math.max(parsed, now)).toISOString();
+}
+
+export function isScheduledRetryDue(nextRetryAt: string | null, now = Date.now()) {
+  if (!nextRetryAt) return true;
+
+  const parsed = Date.parse(nextRetryAt);
+  if (!Number.isFinite(parsed)) return true;
+
+  return now >= parsed;
+}
+
 export function classifyDispatchFailure(status: number | null) {
   if (status === 401 || status === 403 || status === 409 || status === 422) return "permanent" as const;
   return "transient" as const;
