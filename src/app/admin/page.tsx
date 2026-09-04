@@ -88,7 +88,7 @@ export default async function AdminPage() {
           </section>
         )}
 
-        <section className="grid gap-5 lg:grid-cols-3">
+        <section className="grid gap-5 lg:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-[28px] border border-slate-200 bg-white p-7 text-navy shadow-soft">
             <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue">Talentos</p>
             <h2 className="mt-3 text-2xl font-black">Gerenciar catálogo</h2>
@@ -97,6 +97,13 @@ export default async function AdminPage() {
               <Link href="/admin/talentos" className="rounded-full bg-blue px-5 py-3 text-sm font-bold text-white transition hover:opacity-90">Gerenciar talentos</Link>
               <Link href="/admin/talentos/novo" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-bold text-navy transition hover:bg-slate-50">Novo talento</Link>
             </div>
+          </div>
+
+          <div className="rounded-[28px] border border-teal/30 bg-teal/10 p-7 text-navy shadow-soft">
+            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-teal">Categorias</p>
+            <h2 className="mt-3 text-2xl font-black">Filtros profissionais</h2>
+            <p className="mt-3 leading-7 text-slate-600">Crie, edite, ordene, ative, desative ou exclua as categorias exibidas em “Buscar profissional”.</p>
+            <Link href="/admin/categorias" className="mt-6 inline-flex rounded-full bg-teal px-5 py-3 text-sm font-bold text-navy transition hover:opacity-90">Gerenciar categorias</Link>
           </div>
 
           <div className="rounded-[28px] border border-sky-200 bg-sky-50 p-7 text-navy shadow-soft">
