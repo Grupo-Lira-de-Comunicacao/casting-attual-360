@@ -92,6 +92,65 @@ begin
 end;
 $$;
 
+create or replace function public.enforce_integration_invitation_order()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_invitation_id text;
+  v_locked boolean;
+begin
+  if new.status <> 'processando' or old.status = 'processando' then
+    return new;
+  end if;
+
+  v_invitation_id := nullif(new.payload ->> 'invitation_id', '');
+  if v_invitation_id is null then
+    return new;
+  end if;
+
+  v_locked := public.try_lock_integration_invitation(v_invitation_id, new.id);
+  if not v_locked then
+    raise exception 'Convite % possui evento anterior ativo ou processamento concorrente.', v_invitation_id;
+  end if;
+
+  return new;
+end;
+$$;
+
+create or replace function public.release_integration_invitation_order()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_invitation_id text;
+begin
+  if old.status <> 'processando' or new.status = 'processando' then
+    return new;
+  end if;
+
+  v_invitation_id := nullif(old.payload ->> 'invitation_id', '');
+  perform public.unlock_integration_invitation(v_invitation_id, old.id);
+  return new;
+end;
+$$;
+
+drop trigger if exists integration_events_enforce_invitation_order
+  on public.integration_events;
+create trigger integration_events_enforce_invitation_order
+before update of status on public.integration_events
+for each row execute function public.enforce_integration_invitation_order();
+
+drop trigger if exists integration_events_release_invitation_order
+  on public.integration_events;
+create trigger integration_events_release_invitation_order
+after update of status on public.integration_events
+for each row execute function public.release_integration_invitation_order();
+
 alter table public.integration_invitation_dispatch_locks enable row level security;
 revoke all on table public.integration_invitation_dispatch_locks from anon, authenticated;
 grant all on table public.integration_invitation_dispatch_locks to service_role;
@@ -105,3 +164,5 @@ comment on table public.integration_invitation_dispatch_locks is
   'Lock efemero que impede dois workers de processarem simultaneamente eventos do mesmo convite.';
 comment on function public.try_lock_integration_invitation(text, uuid) is
   'Adquire lock apenas para o evento mais antigo ainda ativo do invitation_id informado.';
+comment on function public.enforce_integration_invitation_order() is
+  'Impede a transicao para processando quando existe evento anterior ativo ou lock concorrente do convite.';
