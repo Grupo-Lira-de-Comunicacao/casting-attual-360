@@ -2,12 +2,16 @@ import Link from 'next/link';
 import { SiteShell } from '@/components/site-shell';
 import { SectionHeading } from '@/components/section-heading';
 import { TalentCatalog } from '@/components/talent-catalog';
+import { getPublicProfessionalCategories } from '@/lib/professional-categories';
 import { getPublicTalents } from '@/lib/talents/queries';
 
 export const dynamic = 'force-dynamic';
 
 export default async function TalentsPage() {
-  const { talents, usingFallback } = await getPublicTalents();
+  const [{ talents, usingFallback }, { categories }] = await Promise.all([
+    getPublicTalents(),
+    getPublicProfessionalCategories(),
+  ]);
 
   return (
     <SiteShell>
@@ -17,7 +21,7 @@ export default async function TalentsPage() {
         {talents.length === 0 ? (
           <div className="rounded-[26px] border border-white/10 bg-white/[0.04] p-10 text-center text-slate-300">Nenhum talento ativo disponível no momento.</div>
         ) : (
-          <TalentCatalog talents={talents} />
+          <TalentCatalog talents={talents} categories={categories} />
         )}
         <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-6">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue">Faça parte</p>
