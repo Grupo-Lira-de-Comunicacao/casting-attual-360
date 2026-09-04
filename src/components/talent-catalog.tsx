@@ -4,32 +4,10 @@ import { useMemo, useState } from 'react';
 import type { PublicTalent } from '@/types/talent';
 import { TalentCard } from '@/components/talent-card';
 
-const CATEGORY_FILTERS: Record<string, string[]> = {
-  Apresentador: ['apresentador', 'apresentadora', 'apresentacao'],
-  Audiovisual: ['audiovisual', 'videomaker', 'cinegrafista', 'video', 'captacao'],
-  Dança: ['danca', 'coreografo', 'coreografa'],
-  Fotografia: ['fotografia', 'fotografo', 'fotografa'],
-  'Imagens Aereas': ['imagens aereas', 'imagem aerea', 'fotografia aerea', 'filmagem aerea', 'drone', 'drones'],
-  Influêncer: ['influencer', 'influenciador', 'influenciadora', 'influencia'],
-  Jornalismo: ['jornalismo', 'jornalista'],
-  Locução: ['locucao', 'locutor', 'locutora'],
-  Moda: ['moda', 'modelo'],
-  Reporter: ['reporter', 'reportagem'],
+type CategoryFilter = {
+  name: string;
+  aliases: string[];
 };
-
-const categories = [
-  'Todos',
-  'Apresentador',
-  'Audiovisual',
-  'Dança',
-  'Fotografia',
-  'Imagens Aereas',
-  'Influêncer',
-  'Jornalismo',
-  'Locução',
-  'Moda',
-  'Reporter',
-];
 
 function normalizeText(value: string) {
   return value
@@ -38,7 +16,7 @@ function normalizeText(value: string) {
     .toLocaleLowerCase('pt-BR');
 }
 
-export function TalentCatalog({ talents }: { talents: PublicTalent[] }) {
+export function TalentCatalog({ talents, categories }: { talents: PublicTalent[]; categories: CategoryFilter[] }) {
   const [category, setCategory] = useState('Todos');
   const [query, setQuery] = useState('');
 
@@ -58,12 +36,15 @@ export function TalentCatalog({ talents }: { talents: PublicTalent[] }) {
       ].join(' ');
 
       const normalizedSearchable = normalizeText(searchable);
-      const aliases = CATEGORY_FILTERS[category] ?? [];
+      const selectedCategory = categories.find((item) => item.name === category);
+      const aliases = selectedCategory ? [selectedCategory.name, ...selectedCategory.aliases] : [];
       const matchesCategory = category === 'Todos' || aliases.some((alias) => normalizedSearchable.includes(normalizeText(alias)));
 
       return matchesCategory && (!normalizedQuery || normalizedSearchable.includes(normalizedQuery));
     });
-  }, [category, query, talents]);
+  }, [category, categories, query, talents]);
+
+  const categoryNames = ['Todos', ...categories.map((item) => item.name)];
 
   return (
     <div className="space-y-8">
@@ -71,7 +52,7 @@ export function TalentCatalog({ talents }: { talents: PublicTalent[] }) {
         <label htmlFor="talent-search" className="text-sm font-bold text-white">Buscar profissional</label>
         <input id="talent-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Nome, categoria, especialidade, habilidade, idioma ou cidade" className="mt-3 w-full rounded-2xl border border-white/10 bg-[#061b30] px-5 py-4 text-white outline-none placeholder:text-slate-500 focus:border-teal" />
         <div className="mt-5 flex flex-wrap gap-2" aria-label="Filtrar por categoria">
-          {categories.map((item) => (
+          {categoryNames.map((item) => (
             <button key={item} type="button" onClick={() => setCategory(item)} aria-pressed={category === item} className={`rounded-full px-4 py-2 text-sm font-bold transition ${category === item ? 'bg-teal text-navy' : 'border border-white/10 bg-white/5 text-slate-300 hover:border-teal/50'}`}>
               {item}
             </button>
