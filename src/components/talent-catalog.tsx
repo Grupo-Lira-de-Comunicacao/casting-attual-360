@@ -9,11 +9,11 @@ const CATEGORY_FILTERS: Record<string, string[]> = {
   Audiovisual: ['audiovisual', 'videomaker', 'cinegrafista', 'video', 'captacao'],
   Dança: ['danca', 'coreografo', 'coreografa'],
   Fotografia: ['fotografia', 'fotografo', 'fotografa'],
+  Influêncer: ['influencer', 'influenciador', 'influenciadora', 'influencia'],
   Jornalismo: ['jornalismo', 'jornalista'],
   Locução: ['locucao', 'locutor', 'locutora'],
   Moda: ['moda', 'modelo'],
   Reporter: ['reporter', 'reportagem'],
-  Influêncer: ['influencer', 'influenciador', 'influenciadora', 'influencia'],
 };
 
 const categories = ['Todos', ...Object.keys(CATEGORY_FILTERS)];
