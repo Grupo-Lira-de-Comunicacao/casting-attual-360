@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { SiteShell } from '@/components/site-shell';
 import { IntegrationMetricsDashboard } from '@/components/admin/integration-metrics-dashboard';
+import { IntegrationResilienceStatus } from '@/components/admin/integration-resilience-status';
 import { requireAdminPage } from '@/lib/admin';
 
 export const dynamic = 'force-dynamic';
@@ -13,7 +14,7 @@ export default async function AdminIntegrationMetricsPage() {
       <SiteShell>
         <section className="rounded-[28px] border border-amber-200 bg-amber-50 p-8 text-amber-950 shadow-soft">
           <h1 className="text-3xl font-black">Métricas aguardando preparação do banco</h1>
-          <p className="mt-4">Aplique as migrations de integrações até a versão 007 antes de usar esta área.</p>
+          <p className="mt-4">Aplique as migrations de integrações até a versão 012 antes de usar esta área.</p>
           <Link href="/admin" className="mt-6 inline-flex font-bold text-amber-800">← Voltar ao painel</Link>
         </section>
       </SiteShell>
@@ -41,6 +42,7 @@ export default async function AdminIntegrationMetricsPage() {
           <Link href="/admin/integracoes/eventos" className="mt-6 inline-flex rounded-full bg-white px-5 py-2.5 text-sm font-bold text-navy">Abrir protocolo de eventos</Link>
         </section>
 
+        <IntegrationResilienceStatus />
         <IntegrationMetricsDashboard />
       </div>
     </SiteShell>
