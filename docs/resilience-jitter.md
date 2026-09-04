@@ -9,3 +9,11 @@ Esta alteração adiciona jitter determinístico e limitado ao backoff do dispat
 - não altera `MAX_ATTEMPTS`, classificação HTTP ou política terminal.
 
 O objetivo é reduzir rajadas sincronizadas de retry sem tornar o comportamento imprevisível durante uma mesma tentativa.
+
+## Validação na esteira
+
+As responsabilidades ficam separadas para evitar duplicação e travamentos desnecessários:
+
+- CI: instala dependências e executa lint, typecheck, testes e build;
+- Promotion Gate: valida o SHA exato, a segurança de migrations e gera o manifest de promoção;
+- produção continua fora dos workflows do GitHub e depende da promoção governada pelo ATLAS.
