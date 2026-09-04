@@ -16,7 +16,18 @@ const CATEGORY_FILTERS: Record<string, string[]> = {
   Reporter: ['reporter', 'reportagem'],
 };
 
-const categories = ['Todos', ...Object.keys(CATEGORY_FILTERS)];
+const categories = [
+  'Todos',
+  'Apresentador',
+  'Audiovisual',
+  'Dança',
+  'Fotografia',
+  'Influêncer',
+  'Jornalismo',
+  'Locução',
+  'Moda',
+  'Reporter',
+];
 
 function normalizeText(value: string) {
   return value
