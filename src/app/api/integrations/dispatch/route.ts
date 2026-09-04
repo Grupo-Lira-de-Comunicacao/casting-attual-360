@@ -167,7 +167,16 @@ export async function POST(request: NextRequest) {
   }
 
   const events = ((data ?? []) as IntegrationEvent[])
-    .filter((event) => event.tentativas === 0 || isRetryDue(event.tentativas, event.atualizado_em))
+    .filter(
+      (event) =>
+        event.tentativas === 0 ||
+        isRetryDue(
+          event.tentativas,
+          event.atualizado_em,
+          Date.now(),
+          event.event_key,
+        ),
+    )
     .slice(0, MAX_BATCH_SIZE);
   const results: Array<{ id: string; status: "processado" | "falhou"; error?: string }> = [];
 
