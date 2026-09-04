@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import {
   classifyDispatchFailure,
+  countsTowardCircuitBreaker,
   isRetryDue,
   isScheduledRetryDue,
   retryAfterAt,
@@ -18,6 +19,7 @@ const MAX_BATCH_SIZE = 20;
 const MAX_ATTEMPTS = 7;
 const STALE_PROCESSING_MINUTES = 15;
 const MAX_RESPONSE_LENGTH = 2_000;
+const TARGET_SYSTEM = "attual-one";
 
 type IntegrationEvent = {
   id: string;
@@ -33,6 +35,12 @@ type IntegrationEvent = {
   criado_em: string;
   atualizado_em: string;
   proxima_tentativa_em: string | null;
+};
+
+type CircuitDecision = {
+  allowed: boolean;
+  circuit_state: "closed" | "open" | "half_open";
+  retry_after_at: string | null;
 };
 
 function getServerConfig() {
@@ -108,7 +116,7 @@ export async function POST(request: NextRequest) {
   const { data: staleEvents, error: staleQueryError } = await supabase
     .from("integration_events")
     .select("id,tentativas")
-    .eq("target_system", "attual-one")
+    .eq("target_system", TARGET_SYSTEM)
     .eq("status", "processando")
     .lt("atualizado_em", staleBefore)
     .lt("tentativas", MAX_ATTEMPTS);
@@ -165,7 +173,7 @@ export async function POST(request: NextRequest) {
     .select(
       "id,event_key,event_type,source_system,target_system,organization_external_id,project_external_id,talent_id,payload,tentativas,criado_em,atualizado_em,proxima_tentativa_em",
     )
-    .eq("target_system", "attual-one")
+    .eq("target_system", TARGET_SYSTEM)
     .in("status", ["pendente", "falhou"])
     .lt("tentativas", MAX_ATTEMPTS)
     .order("criado_em", { ascending: true })
@@ -177,7 +185,7 @@ export async function POST(request: NextRequest) {
   }
 
   const now = Date.now();
-  const events = ((data ?? []) as IntegrationEvent[])
+  const dueEvents = ((data ?? []) as IntegrationEvent[])
     .filter(
       (event) =>
         isScheduledRetryDue(event.proxima_tentativa_em, now) &&
@@ -190,7 +198,51 @@ export async function POST(request: NextRequest) {
           )),
     )
     .slice(0, MAX_BATCH_SIZE);
+
+  let circuitDecision: CircuitDecision = {
+    allowed: true,
+    circuit_state: "closed",
+    retry_after_at: null,
+  };
+
+  if (dueEvents.length > 0) {
+    const { data: circuitRows, error: circuitError } = await supabase.rpc(
+      "integration_circuit_allow",
+      { p_target_system: TARGET_SYSTEM },
+    );
+
+    if (circuitError) {
+      console.error("[dispatcher] falha ao consultar circuit breaker", circuitError);
+      return NextResponse.json(
+        { error: "Falha ao consultar proteção de integração." },
+        { status: 503 },
+      );
+    }
+
+    const first = Array.isArray(circuitRows) ? circuitRows[0] : circuitRows;
+    if (first) circuitDecision = first as CircuitDecision;
+  }
+
+  if (!circuitDecision.allowed) {
+    return NextResponse.json({
+      recovered: recoveredCount,
+      selected: 0,
+      processed: 0,
+      failed: 0,
+      results: [],
+      circuit: {
+        state: circuitDecision.circuit_state,
+        retry_after_at: circuitDecision.retry_after_at,
+      },
+    });
+  }
+
+  const events =
+    circuitDecision.circuit_state === "half_open"
+      ? dueEvents.slice(0, 1)
+      : dueEvents;
   const results: Array<{ id: string; status: "processado" | "falhou"; error?: string }> = [];
+  let circuitOpened = false;
 
   for (const event of events) {
     const nextAttempt = event.tentativas + 1;
@@ -318,6 +370,14 @@ export async function POST(request: NextRequest) {
         })
         .eq("id", attempt.id);
 
+      const { error: circuitSuccessError } = await supabase.rpc(
+        "integration_circuit_record_success",
+        { p_target_system: TARGET_SYSTEM },
+      );
+      if (circuitSuccessError) {
+        console.error("[dispatcher] falha ao fechar circuit breaker", circuitSuccessError);
+      }
+
       results.push({ id: event.id, status: "processado" });
     } catch (dispatchError) {
       const message = errorMessage(dispatchError).slice(0, 1000);
@@ -339,6 +399,18 @@ export async function POST(request: NextRequest) {
 
       if (attemptUpdateError) {
         console.error("[dispatcher] falha ao auditar tentativa terminal", attemptUpdateError);
+      }
+
+      if (countsTowardCircuitBreaker(httpStatus)) {
+        const { data: breakerRow, error: breakerError } = await supabase.rpc(
+          "integration_circuit_record_failure",
+          { p_target_system: TARGET_SYSTEM },
+        );
+        if (breakerError) {
+          console.error("[dispatcher] falha ao registrar circuit breaker", breakerError);
+        } else {
+          circuitOpened = breakerRow?.state === "open";
+        }
       }
 
       if (terminal) {
@@ -376,6 +448,8 @@ export async function POST(request: NextRequest) {
       }
 
       results.push({ id: event.id, status: "falhou", error: message });
+
+      if (circuitOpened) break;
     }
   }
 
@@ -385,5 +459,8 @@ export async function POST(request: NextRequest) {
     processed: results.filter((item) => item.status === "processado").length,
     failed: results.filter((item) => item.status === "falhou").length,
     results,
+    circuit: {
+      state: circuitOpened ? "open" : circuitDecision.circuit_state,
+    },
   });
 }
