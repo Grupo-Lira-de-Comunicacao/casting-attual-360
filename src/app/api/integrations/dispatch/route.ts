@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   classifyDispatchFailure,
   isRetryDue,
+  isScheduledRetryDue,
+  retryAfterAt,
   signedCastingHeaders,
 } from "@/lib/integrations/dispatch-policy";
 
@@ -28,6 +30,7 @@ type IntegrationEvent = {
   tentativas: number;
   criado_em: string;
   atualizado_em: string;
+  proxima_tentativa_em: string | null;
 };
 
 function getServerConfig() {
@@ -133,6 +136,7 @@ export async function POST(request: NextRequest) {
       .from("integration_events")
       .update({
         status: "falhou",
+        proxima_tentativa_em: null,
         ultimo_erro: `Processamento interrompido por mais de ${STALE_PROCESSING_MINUTES} minutos; liberado para nova tentativa.`,
       })
       .in("id", staleIds)
@@ -153,7 +157,7 @@ export async function POST(request: NextRequest) {
   const { data, error } = await supabase
     .from("integration_events")
     .select(
-      "id,event_key,event_type,source_system,target_system,organization_external_id,project_external_id,talent_id,payload,tentativas,criado_em,atualizado_em",
+      "id,event_key,event_type,source_system,target_system,organization_external_id,project_external_id,talent_id,payload,tentativas,criado_em,atualizado_em,proxima_tentativa_em",
     )
     .eq("target_system", "attual-one")
     .in("status", ["pendente", "falhou"])
@@ -166,16 +170,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Falha ao consultar fila." }, { status: 500 });
   }
 
+  const now = Date.now();
   const events = ((data ?? []) as IntegrationEvent[])
     .filter(
       (event) =>
-        event.tentativas === 0 ||
-        isRetryDue(
-          event.tentativas,
-          event.atualizado_em,
-          Date.now(),
-          event.event_key,
-        ),
+        isScheduledRetryDue(event.proxima_tentativa_em, now) &&
+        (event.tentativas === 0 ||
+          isRetryDue(
+            event.tentativas,
+            event.atualizado_em,
+            now,
+            event.event_key,
+          )),
     )
     .slice(0, MAX_BATCH_SIZE);
   const results: Array<{ id: string; status: "processado" | "falhou"; error?: string }> = [];
@@ -188,6 +194,7 @@ export async function POST(request: NextRequest) {
       .update({
         status: "processando",
         tentativas: nextAttempt,
+        proxima_tentativa_em: null,
         ultimo_erro: null,
       })
       .eq("id", event.id)
@@ -230,6 +237,7 @@ export async function POST(request: NextRequest) {
 
     let httpStatus: number | null = null;
     let receivedPayload: Record<string, unknown> | null = null;
+    let retryAfterSchedule: string | null = null;
 
     try {
       const body = JSON.stringify({
@@ -265,6 +273,10 @@ export async function POST(request: NextRequest) {
       });
 
       httpStatus = response.status;
+      if (httpStatus === 429) {
+        retryAfterSchedule = retryAfterAt(response.headers.get("retry-after"));
+      }
+
       const responseText = await response.text();
       receivedPayload = responsePayload(responseText);
 
@@ -279,6 +291,7 @@ export async function POST(request: NextRequest) {
         .update({
           status: "processado",
           processado_em: new Date().toISOString(),
+          proxima_tentativa_em: null,
           ultimo_erro: null,
         })
         .eq("id", event.id);
@@ -310,7 +323,11 @@ export async function POST(request: NextRequest) {
       await Promise.all([
         supabase
           .from("integration_events")
-          .update({ status: terminal ? "cancelado" : "falhou", ultimo_erro: message })
+          .update({
+            status: terminal ? "cancelado" : "falhou",
+            proxima_tentativa_em: terminal ? null : retryAfterSchedule,
+            ultimo_erro: message,
+          })
           .eq("id", event.id),
         supabase
           .from("integration_event_attempts")
