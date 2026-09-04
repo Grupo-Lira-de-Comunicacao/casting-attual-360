@@ -60,6 +60,12 @@ export function classifyDispatchFailure(status: number | null) {
   return "transient" as const;
 }
 
+export function countsTowardCircuitBreaker(status: number | null) {
+  if (status === null) return true;
+  if (status === 408 || status === 429) return true;
+  return status >= 500 && status <= 599;
+}
+
 export function signedCastingHeaders(input: {
   body: string;
   eventKey: string;
