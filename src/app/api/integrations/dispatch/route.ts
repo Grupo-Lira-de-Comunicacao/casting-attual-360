@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -73,6 +75,10 @@ function responsePayload(raw: string) {
   } catch {
     return { raw: limited };
   }
+}
+
+function payloadHash(payload: Record<string, unknown>) {
+  return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 
 export async function POST(request: NextRequest) {
@@ -316,31 +322,58 @@ export async function POST(request: NextRequest) {
     } catch (dispatchError) {
       const message = errorMessage(dispatchError).slice(0, 1000);
       const finishedAt = new Date().toISOString();
+      const permanent = classifyDispatchFailure(httpStatus) === "permanent";
+      const terminal = permanent || nextAttempt >= MAX_ATTEMPTS;
 
-      const terminal =
-        classifyDispatchFailure(httpStatus) === "permanent" || nextAttempt >= MAX_ATTEMPTS;
+      const { error: attemptUpdateError } = await supabase
+        .from("integration_event_attempts")
+        .update({
+          status: "falhou",
+          finished_at: finishedAt,
+          http_status: httpStatus,
+          response_payload: receivedPayload,
+          duration_ms: Date.now() - startedAt.getTime(),
+          error_message: message,
+        })
+        .eq("id", attempt.id);
 
-      await Promise.all([
-        supabase
+      if (attemptUpdateError) {
+        console.error("[dispatcher] falha ao auditar tentativa terminal", attemptUpdateError);
+      }
+
+      if (terminal) {
+        const { error: deadLetterError } = await supabase.rpc(
+          "dead_letter_integration_event",
+          {
+            p_event_id: event.id,
+            p_payload_hash: payloadHash(event.payload),
+            p_reason: permanent
+              ? `permanent_http_${httpStatus ?? "network"}`
+              : "max_attempts_exhausted",
+          },
+        );
+
+        if (deadLetterError) {
+          console.error("[dispatcher] falha ao registrar dead-letter", deadLetterError);
+          await supabase
+            .from("integration_events")
+            .update({
+              status: "cancelado",
+              proxima_tentativa_em: null,
+              ultimo_erro: `${message} | dead-letter: ${deadLetterError.message}`.slice(0, 1000),
+            })
+            .eq("id", event.id);
+        }
+      } else {
+        await supabase
           .from("integration_events")
           .update({
-            status: terminal ? "cancelado" : "falhou",
-            proxima_tentativa_em: terminal ? null : retryAfterSchedule,
+            status: "falhou",
+            proxima_tentativa_em: retryAfterSchedule,
             ultimo_erro: message,
           })
-          .eq("id", event.id),
-        supabase
-          .from("integration_event_attempts")
-          .update({
-            status: "falhou",
-            finished_at: finishedAt,
-            http_status: httpStatus,
-            response_payload: receivedPayload,
-            duration_ms: Date.now() - startedAt.getTime(),
-            error_message: message,
-          })
-          .eq("id", attempt.id),
-      ]);
+          .eq("id", event.id);
+      }
 
       results.push({ id: event.id, status: "falhou", error: message });
     }
