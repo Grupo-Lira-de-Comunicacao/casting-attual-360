@@ -28,6 +28,7 @@ function databasePayload(input: TalentInput) {
     instagram: input.instagram || null,
     telefone: input.telefone || null,
     email: input.email || null,
+    destaque_texto: input.destaque_texto || null,
     destaque: input.destaque,
     ativo: input.ativo,
     ordem: input.ordem,
