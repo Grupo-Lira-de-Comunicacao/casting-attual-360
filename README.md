@@ -17,7 +17,8 @@ O projeto já ultrapassou a Fase 1 demonstrativa. A `main` atual contém:
 - vínculo e convites via Telegram;
 - fila de eventos de integração;
 - auditoria e métricas operacionais;
-- contratos de integração com o ATTUAL ONE.
+- contratos de integração com o ATTUAL ONE;
+- acionamento seguro do dispatcher por assinatura Ed25519 a partir da VPS.
 
 O fallback demonstrativo continua no código apenas como mecanismo de contingência quando o backend público não está acessível. Em produção normal, o catálogo deve consumir os registros ativos do Supabase.
 
@@ -78,7 +79,12 @@ As migrations ficam em `supabase/migrations/` e incluem talentos, integrações,
 - `/admin/integracoes/eventos` — eventos de integração
 - `/admin/integracoes/metricas` — métricas operacionais
 - `/api/telegram/webhook` — webhook Telegram
-- `/api/integrations/dispatch` — dispatcher de integrações
+- `/api/integrations/dispatch` — dispatcher de integrações autenticado pelo segredo legado
+- `/api/integrations/dispatch-signed` — acionamento do dispatcher autenticado por assinatura Ed25519 da VPS
+
+## Dispatcher automático
+
+O acionamento periódico de produção é feito pela VPS do Grupo Lira. A chave privada Ed25519 permanece somente na VPS e a aplicação recebe apenas a chave pública. Cada chamada inclui timestamp e assinatura, com janela curta anti-replay, e então reutiliza o dispatcher interno existente para entregar os eventos ao ATTUAL ONE.
 
 ## Deploy
 
