@@ -25,6 +25,33 @@ export type TalentRecord = {
   atualizado_em: string;
 };
 
+export type TalentMediaKind = 'photo' | 'video';
+
+export type TalentMediaRecord = {
+  id: string;
+  talent_id: string;
+  kind: TalentMediaKind;
+  storage_path: string | null;
+  external_url: string | null;
+  title: string | null;
+  sort_order: number;
+  active: boolean;
+  criado_em: string;
+  atualizado_em: string;
+};
+
+export type AdminTalentMedia = TalentMediaRecord & {
+  previewUrl: string | null;
+};
+
+export type PublicTalentVideo = {
+  id: string;
+  url: string;
+  title: string | null;
+  provider: 'youtube' | 'vimeo' | 'direct' | 'link';
+  embedUrl: string | null;
+};
+
 export type PublicTalent = {
   id: string;
   slug: string;
@@ -44,6 +71,7 @@ export type PublicTalent = {
   availabilityOptions: string[];
   image: string | null;
   gallery: string[];
+  videos: PublicTalentVideo[];
   instagram: string | null;
   featured: boolean;
   order: number;

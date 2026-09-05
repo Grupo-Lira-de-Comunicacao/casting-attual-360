@@ -1,10 +1,11 @@
 import { demoTalents } from '@/data/demo-data';
 import { createClient } from '@/lib/supabase/server';
-import type { PublicTalent, TalentRecord } from '@/types/talent';
+import type { AdminTalentMedia, PublicTalent, PublicTalentVideo, TalentMediaRecord, TalentRecord } from '@/types/talent';
 
 const publicColumns =
   'id, slug, nome, nome_artistico, categoria, subcategorias, especialidades, habilidades, idiomas, disponibilidades, cidade, estado, biografia, foto_url, foto_path, instagram, destaque_texto, destaque, ativo, ordem, criado_em, atualizado_em';
 const adminColumns = `${publicColumns}, telefone, email`;
+const mediaColumns = 'id, talent_id, kind, storage_path, external_url, title, sort_order, active, criado_em, atualizado_em';
 
 function unique(items: string[]) {
   return Array.from(new Set(items.filter(Boolean)));
@@ -30,6 +31,7 @@ function demoToPublic(talent: (typeof demoTalents)[number], index: number): Publ
     availabilityOptions: [talent.availability],
     image: talent.image,
     gallery: talent.gallery,
+    videos: [],
     instagram: null,
     featured: index < 3,
     order: index + 1,
@@ -37,9 +39,59 @@ function demoToPublic(talent: (typeof demoTalents)[number], index: number): Publ
   };
 }
 
+function publicVideo(media: TalentMediaRecord): PublicTalentVideo | null {
+  const raw = media.external_url?.trim();
+  if (!raw) return null;
+
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== 'https:') return null;
+    const host = url.hostname.replace(/^www\./, '').toLowerCase();
+
+    if (host === 'youtu.be') {
+      const id = url.pathname.split('/').filter(Boolean)[0];
+      if (id) return { id: media.id, url: raw, title: media.title, provider: 'youtube', embedUrl: `https://www.youtube.com/embed/${encodeURIComponent(id)}` };
+    }
+
+    if (host === 'youtube.com' || host === 'm.youtube.com') {
+      const parts = url.pathname.split('/').filter(Boolean);
+      const id = url.pathname === '/watch' ? url.searchParams.get('v') : (parts[0] === 'shorts' || parts[0] === 'embed') ? parts[1] : null;
+      if (id) return { id: media.id, url: raw, title: media.title, provider: 'youtube', embedUrl: `https://www.youtube.com/embed/${encodeURIComponent(id)}` };
+    }
+
+    if (host === 'vimeo.com' || host === 'player.vimeo.com') {
+      const id = url.pathname.split('/').filter(Boolean).find((part) => /^\d+$/.test(part));
+      if (id) return { id: media.id, url: raw, title: media.title, provider: 'vimeo', embedUrl: `https://player.vimeo.com/video/${id}` };
+    }
+
+    if (/\.(mp4|webm|ogg)$/i.test(url.pathname)) {
+      return { id: media.id, url: raw, title: media.title, provider: 'direct', embedUrl: null };
+    }
+
+    return { id: media.id, url: raw, title: media.title, provider: 'link', embedUrl: null };
+  } catch {
+    return null;
+  }
+}
+
 async function resolvePhotoUrls(records: TalentRecord[]) {
   const supabase = await createClient();
-  const paths = records.map((record) => record.foto_path).filter((path): path is string => Boolean(path));
+  const talentIds = records.map((record) => record.id);
+  const { data: mediaData, error: mediaError } = talentIds.length
+    ? await supabase
+        .from('talent_media')
+        .select(mediaColumns)
+        .in('talent_id', talentIds)
+        .eq('active', true)
+        .order('sort_order', { ascending: true })
+        .order('criado_em', { ascending: true })
+    : { data: [], error: null };
+  const mediaRows = mediaError ? [] : ((mediaData ?? []) as TalentMediaRecord[]);
+
+  const paths = unique([
+    ...records.map((record) => record.foto_path ?? ''),
+    ...mediaRows.filter((media) => media.kind === 'photo').map((media) => media.storage_path ?? ''),
+  ]);
   const signedByPath = new Map<string, string>();
 
   if (paths.length > 0) {
@@ -48,6 +100,13 @@ async function resolvePhotoUrls(records: TalentRecord[]) {
       if (item.signedUrl) signedByPath.set(paths[index], item.signedUrl);
     });
   }
+
+  const mediaByTalent = new Map<string, TalentMediaRecord[]>();
+  mediaRows.forEach((media) => {
+    const rows = mediaByTalent.get(media.talent_id) ?? [];
+    rows.push(media);
+    mediaByTalent.set(media.talent_id, rows);
+  });
 
   return records.map((record): PublicTalent => {
     const categories = unique([record.categoria, ...(record.subcategorias ?? [])]);
@@ -58,6 +117,17 @@ async function resolvePhotoUrls(records: TalentRecord[]) {
     const primarySpecialty = specialties[0] ?? skills[0] ?? categories[1] ?? record.categoria;
     const highlightText = record.destaque_texto?.trim() || skills[0] || primarySpecialty;
     const image = (record.foto_path && signedByPath.get(record.foto_path)) || record.foto_url || null;
+    const media = mediaByTalent.get(record.id) ?? [];
+    const gallery = unique([
+      image ?? '',
+      ...media
+        .filter((item) => item.kind === 'photo')
+        .map((item) => (item.storage_path && signedByPath.get(item.storage_path)) || item.external_url || ''),
+    ]);
+    const videos = media
+      .filter((item) => item.kind === 'video')
+      .map(publicVideo)
+      .filter((item): item is PublicTalentVideo => Boolean(item));
 
     return {
       id: record.id,
@@ -77,7 +147,8 @@ async function resolvePhotoUrls(records: TalentRecord[]) {
       languages,
       availabilityOptions,
       image,
-      gallery: image ? [image] : [],
+      gallery,
+      videos,
       instagram: record.instagram,
       featured: record.destaque,
       order: record.ordem,
@@ -123,5 +194,33 @@ export async function getAdminTalent(id: string) {
     const { data: signedPhoto } = await supabase.storage.from('talent-photos').createSignedUrl(talent.foto_path, 60 * 60);
     photoUrl = signedPhoto?.signedUrl ?? photoUrl;
   }
-  return { talent, photoUrl, error };
+
+  let media: AdminTalentMedia[] = [];
+  if (talent) {
+    const { data: mediaData, error: mediaError } = await supabase
+      .from('talent_media')
+      .select(mediaColumns)
+      .eq('talent_id', talent.id)
+      .eq('active', true)
+      .order('sort_order', { ascending: true })
+      .order('criado_em', { ascending: true });
+
+    if (!mediaError && mediaData) {
+      const rows = mediaData as TalentMediaRecord[];
+      const paths = unique(rows.filter((item) => item.kind === 'photo').map((item) => item.storage_path ?? ''));
+      const signedByPath = new Map<string, string>();
+      if (paths.length > 0) {
+        const { data: signed } = await supabase.storage.from('talent-photos').createSignedUrls(paths, 60 * 60);
+        signed?.forEach((item, index) => {
+          if (item.signedUrl) signedByPath.set(paths[index], item.signedUrl);
+        });
+      }
+      media = rows.map((item) => ({
+        ...item,
+        previewUrl: (item.storage_path && signedByPath.get(item.storage_path)) || item.external_url || null,
+      }));
+    }
+  }
+
+  return { talent, photoUrl, media, error };
 }

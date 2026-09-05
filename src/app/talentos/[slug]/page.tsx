@@ -50,24 +50,69 @@ export default async function TalentDetailPage({ params }: { params: Promise<{ s
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue">Portfólio visual</p>
               <h2 className="mt-2 text-3xl font-black text-white">Galeria de apresentação</h2>
             </div>
-            <p className="max-w-xl text-sm leading-6 text-slate-400">{talent.isDemo ? 'Conteúdo e imagens fictícios, criados exclusivamente para demonstrar a experiência do catálogo.' : 'Imagem disponibilizada e controlada pela equipe do Casting Attual 360.'}</p>
+            <p className="max-w-xl text-sm leading-6 text-slate-400">{talent.isDemo ? 'Conteúdo e imagens fictícios, criados exclusivamente para demonstrar a experiência do catálogo.' : 'Fotos disponibilizadas e controladas pela equipe do Casting Attual 360.'}</p>
           </div>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {talent.gallery.map((image, index) => (
-              <div key={image} className="relative aspect-[4/5] overflow-hidden rounded-[22px] border border-white/10 bg-white/5">
-                <TalentImage src={image} alt={`Foto ${index + 1} de ${talent.name}`} sizes="(min-width: 1024px) 22vw, (min-width: 640px) 45vw, 100vw" className="object-cover transition duration-500 hover:scale-[1.03]" />
-              </div>
-            ))}
-          </div>
+          {talent.gallery.length > 0 ? (
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {talent.gallery.map((image, index) => (
+                <div key={`${image}-${index}`} className="relative aspect-[4/5] overflow-hidden rounded-[22px] border border-white/10 bg-white/5">
+                  <TalentImage src={image} alt={`Foto ${index + 1} de ${talent.name}`} sizes="(min-width: 1024px) 22vw, (min-width: 640px) 45vw, 100vw" className="object-cover transition duration-500 hover:scale-[1.03]" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-8 rounded-2xl border border-dashed border-white/15 px-5 py-6 text-sm text-slate-400">Galeria em atualização.</p>
+          )}
         </section>
 
-        <section className="grid gap-5 border-t border-white/10 p-7 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center lg:p-14">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue">Vídeo demonstrativo</p>
-            <h2 className="mt-2 text-2xl font-black text-white">Apresentação em vídeo em breve</h2>
-            <p className="mt-2 text-slate-400">O espaço está preparado para receber o material real do profissional sem usar vídeos de terceiros.</p>
+        <section className="border-t border-white/10 p-7 sm:p-10 lg:p-14">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue">Vídeos</p>
+              <h2 className="mt-2 text-3xl font-black text-white">Apresentação em movimento</h2>
+            </div>
+            {talent.videos.length > 0 && <p className="max-w-xl text-sm leading-6 text-slate-400">Vídeos selecionados para apresentar presença, comunicação e trabalhos do profissional.</p>}
           </div>
-          <Link href="/para-empresas" className="inline-flex rounded-full bg-gradient-to-r from-blue to-teal px-6 py-3 font-bold text-white transition hover:brightness-110">Quero criar uma campanha</Link>
+
+          {talent.videos.length > 0 ? (
+            <div className="mt-8 grid gap-5 lg:grid-cols-2">
+              {talent.videos.map((video, index) => (
+                <div key={video.id} className="overflow-hidden rounded-[24px] border border-white/10 bg-black/25">
+                  {video.embedUrl ? (
+                    <div className="aspect-video">
+                      <iframe
+                        className="h-full w-full"
+                        src={video.embedUrl}
+                        title={video.title || `Vídeo ${index + 1} de ${talent.name}`}
+                        loading="lazy"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                      />
+                    </div>
+                  ) : video.provider === 'direct' ? (
+                    <video className="aspect-video w-full bg-black" controls preload="metadata" src={video.url}>
+                      Seu navegador não suporta a reprodução deste vídeo.
+                    </video>
+                  ) : (
+                    <div className="flex aspect-video items-center justify-center bg-white/5 p-8 text-center">
+                      <a href={video.url} target="_blank" rel="noreferrer" className="rounded-full bg-gradient-to-r from-blue to-teal px-6 py-3 font-bold text-white transition hover:brightness-110">Assistir vídeo ↗</a>
+                    </div>
+                  )}
+                  <div className="p-4">
+                    <p className="font-bold text-white">{video.title || `Vídeo ${index + 1}`}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-8 grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div>
+                <h3 className="text-2xl font-black text-white">Apresentação em vídeo em breve</h3>
+                <p className="mt-2 text-slate-400">O espaço está preparado para receber vídeos reais do profissional.</p>
+              </div>
+              <Link href="/empresas" className="inline-flex rounded-full bg-gradient-to-r from-blue to-teal px-6 py-3 font-bold text-white transition hover:brightness-110">Quero criar uma campanha</Link>
+            </div>
+          )}
         </section>
       </article>
     </SiteShell>
