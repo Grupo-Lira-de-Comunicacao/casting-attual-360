@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import type { PublicTalent, TalentRecord } from '@/types/talent';
 
 const publicColumns =
-  'id, slug, nome, nome_artistico, categoria, subcategorias, especialidades, habilidades, idiomas, disponibilidades, cidade, estado, biografia, foto_url, foto_path, instagram, destaque, ativo, ordem, criado_em, atualizado_em';
+  'id, slug, nome, nome_artistico, categoria, subcategorias, especialidades, habilidades, idiomas, disponibilidades, cidade, estado, biografia, foto_url, foto_path, instagram, destaque_texto, destaque, ativo, ordem, criado_em, atualizado_em';
 const adminColumns = `${publicColumns}, telefone, email`;
 
 function unique(items: string[]) {
@@ -56,6 +56,7 @@ async function resolvePhotoUrls(records: TalentRecord[]) {
     const languages = record.idiomas ?? [];
     const availabilityOptions = record.disponibilidades ?? [];
     const primarySpecialty = specialties[0] ?? skills[0] ?? categories[1] ?? record.categoria;
+    const highlightText = record.destaque_texto?.trim() || skills[0] || primarySpecialty;
     const image = (record.foto_path && signedByPath.get(record.foto_path)) || record.foto_url || null;
 
     return {
@@ -68,7 +69,7 @@ async function resolvePhotoUrls(records: TalentRecord[]) {
       specialty: primarySpecialty,
       description: record.biografia,
       availability: availabilityOptions.length > 0 ? availabilityOptions.join(' · ') : 'Disponível para oportunidades',
-      highlight: skills[0] ?? primarySpecialty,
+      highlight: highlightText,
       category: record.categoria,
       categories,
       specialties,

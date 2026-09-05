@@ -17,6 +17,7 @@ export type TalentRecord = {
   instagram: string | null;
   telefone: string | null;
   email: string | null;
+  destaque_texto: string | null;
   destaque: boolean;
   ativo: boolean;
   ordem: number;
@@ -66,6 +67,7 @@ export type TalentInput = {
   instagram: string;
   telefone: string;
   email: string;
+  destaque_texto: string;
   destaque: boolean;
   ativo: boolean;
   ordem: number;
