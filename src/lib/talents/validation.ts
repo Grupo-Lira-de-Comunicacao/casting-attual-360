@@ -44,6 +44,7 @@ export function parseTalentInput(formData: FormData): TalentInput {
     instagram: text(formData, 'instagram'),
     telefone: text(formData, 'telefone'),
     email: text(formData, 'email').toLowerCase(),
+    destaque_texto: text(formData, 'destaque_texto'),
     destaque: formData.get('destaque') === 'on',
     ativo: formData.get('ativo') === 'on',
     ordem: Number(text(formData, 'ordem') || 0),
@@ -71,6 +72,7 @@ export function validateTalentInput(input: TalentInput): string | null {
   if (input.instagram && !instagramPattern.test(input.instagram)) return 'Informe um usuário válido do Instagram.';
   if (input.telefone.length > 30) return 'O telefone deve ter até 30 caracteres.';
   if (input.email && (input.email.length > 180 || !emailPattern.test(input.email))) return 'Informe um e-mail válido.';
+  if (input.destaque_texto.length > 160) return 'O texto de destaque deve ter até 160 caracteres.';
   if (!Number.isInteger(input.ordem) || input.ordem < 0 || input.ordem > 9999) return 'A ordem deve ser um número inteiro entre 0 e 9.999.';
   return null;
 }
