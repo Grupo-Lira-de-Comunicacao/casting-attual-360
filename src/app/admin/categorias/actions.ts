@@ -5,6 +5,10 @@ import { redirect } from 'next/navigation';
 import { requireAdminAction } from '@/lib/admin';
 import { createClient } from '@/lib/supabase/server';
 
+type ParsedCategory =
+  | { ok: true; value: { name: string; slug: string; aliases: string[]; order: number; active: boolean } }
+  | { ok: false; error: string };
+
 function slugify(value: string) {
   return value
     .normalize('NFD')
@@ -22,20 +26,20 @@ function parseAliases(value: FormDataEntryValue | null) {
     .slice(0, 30);
 }
 
-function parseCategory(formData: FormData) {
+function parseCategory(formData: FormData): ParsedCategory {
   const name = String(formData.get('name') ?? '').trim();
   const aliases = parseAliases(formData.get('aliases'));
   const order = Number.parseInt(String(formData.get('order') ?? '0'), 10);
   const active = formData.get('active') === 'on';
 
-  if (name.length < 2 || name.length > 80) return { error: 'O nome deve ter entre 2 e 80 caracteres.' } as const;
-  if (!Number.isInteger(order) || order < 0 || order > 9999) return { error: 'A ordem deve ser um número entre 0 e 9999.' } as const;
-  if (aliases.some((item) => item.length > 80)) return { error: 'Cada termo associado deve ter até 80 caracteres.' } as const;
+  if (name.length < 2 || name.length > 80) return { ok: false, error: 'O nome deve ter entre 2 e 80 caracteres.' };
+  if (!Number.isInteger(order) || order < 0 || order > 9999) return { ok: false, error: 'A ordem deve ser um número entre 0 e 9999.' };
+  if (aliases.some((item) => item.length > 80)) return { ok: false, error: 'Cada termo associado deve ter até 80 caracteres.' };
 
   const slug = slugify(name);
-  if (!slug) return { error: 'Não foi possível gerar um identificador para a categoria.' } as const;
+  if (!slug) return { ok: false, error: 'Não foi possível gerar um identificador para a categoria.' };
 
-  return { value: { name, slug, aliases, order, active } } as const;
+  return { ok: true, value: { name, slug, aliases, order, active } };
 }
 
 function goWithMessage(kind: 'ok' | 'error', message: string): never {
@@ -47,7 +51,7 @@ export async function createProfessionalCategory(formData: FormData) {
   if (!authorization.ok) goWithMessage('error', authorization.error);
 
   const parsed = parseCategory(formData);
-  if ('error' in parsed) goWithMessage('error', parsed.error);
+  if (!parsed.ok) goWithMessage('error', parsed.error);
 
   const supabase = await createClient();
   const { error } = await supabase.from('professional_categories').insert({
@@ -76,7 +80,7 @@ export async function updateProfessionalCategory(formData: FormData) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) goWithMessage('error', 'Categoria inválida.');
 
   const parsed = parseCategory(formData);
-  if ('error' in parsed) goWithMessage('error', parsed.error);
+  if (!parsed.ok) goWithMessage('error', parsed.error);
 
   const supabase = await createClient();
   const { error } = await supabase
