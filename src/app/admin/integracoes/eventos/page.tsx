@@ -43,8 +43,8 @@ export default async function AdminIntegrationEventsPage() {
               <p className="mt-3 max-w-3xl text-white/80">Acompanhe a fila do Telegram e do Casting, inspecione payloads, identifique falhas e reenvie somente os eventos elegíveis.</p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Link href="/admin" className="rounded-full border border-white/25 px-5 py-2.5 text-sm font-bold">Solicitações</Link>
-              <Link href="/admin/talentos" className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-navy">Talentos</Link>
+              <Link href="/admin/integracoes" className="rounded-full border border-white/25 px-5 py-2.5 text-sm font-bold">← Central de integrações</Link>
+              <Link href="/admin/integracoes/metricas" className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-navy">Ver métricas</Link>
             </div>
           </div>
         </section>
