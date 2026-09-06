@@ -39,7 +39,10 @@ export default async function AdminIntegrationMetricsPage() {
           <p className="text-sm font-bold uppercase tracking-[0.3em] text-white/70">Casting Attual 360 + ATTUAL ONE</p>
           <h1 className="mt-3 text-3xl font-black">Dashboard executivo de integrações</h1>
           <p className="mt-3 max-w-3xl text-white/80">Indicadores operacionais, desempenho, falhas recentes e saúde geral do fluxo entre Telegram, Casting e ATTUAL ONE.</p>
-          <Link href="/admin/integracoes/eventos" className="mt-6 inline-flex rounded-full bg-white px-5 py-2.5 text-sm font-bold text-navy">Abrir protocolo de eventos</Link>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/admin/integracoes" className="inline-flex rounded-full border border-white/25 px-5 py-2.5 text-sm font-bold text-white">← Central de integrações</Link>
+            <Link href="/admin/integracoes/eventos" className="inline-flex rounded-full bg-white px-5 py-2.5 text-sm font-bold text-navy">Abrir protocolo de eventos</Link>
+          </div>
         </section>
 
         <IntegrationResilienceStatus />
