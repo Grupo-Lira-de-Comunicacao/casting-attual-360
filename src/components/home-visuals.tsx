@@ -25,7 +25,7 @@ export function PlatformPreview({ talents }: { talents: PublicTalent[] }) {
       <div className="relative rotate-[-1deg] rounded-[30px] border border-white/15 bg-[#092746]/85 p-3 shadow-[0_35px_100px_-30px_rgba(15,111,255,0.9)] backdrop-blur-xl sm:p-4">
         <div className="flex items-center justify-between border-b border-white/10 px-2 pb-3">
           <div className="flex gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-gold" /><span className="h-2.5 w-2.5 rounded-full bg-teal" /><span className="h-2.5 w-2.5 rounded-full bg-blue" /></div>
-          <span className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">Catálogo demonstrativo</span>
+          <span className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">Talentos em destaque</span>
         </div>
         <div className="grid grid-cols-[1.15fr_.85fr] gap-3 pt-3">
           <div className="relative min-h-64 overflow-hidden rounded-2xl sm:min-h-80">
