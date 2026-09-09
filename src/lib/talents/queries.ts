@@ -1,4 +1,3 @@
-import { demoTalents } from '@/data/demo-data';
 import { createClient } from '@/lib/supabase/server';
 import type { AdminTalentMedia, PublicTalent, PublicTalentVideo, TalentMediaRecord, TalentRecord } from '@/types/talent';
 
@@ -9,34 +8,6 @@ const mediaColumns = 'id, talent_id, kind, storage_path, external_url, title, so
 
 function unique(items: string[]) {
   return Array.from(new Set(items.filter(Boolean)));
-}
-
-function demoToPublic(talent: (typeof demoTalents)[number], index: number): PublicTalent {
-  return {
-    id: `demo:${talent.slug}`,
-    slug: talent.slug,
-    name: talent.name,
-    artisticName: null,
-    role: talent.role,
-    location: talent.location,
-    specialty: talent.specialty,
-    description: talent.description,
-    availability: talent.availability,
-    highlight: talent.highlight,
-    category: talent.category,
-    categories: [talent.category],
-    specialties: [talent.specialty],
-    skills: [talent.highlight],
-    languages: [],
-    availabilityOptions: [talent.availability],
-    image: talent.image,
-    gallery: talent.gallery,
-    videos: [],
-    instagram: null,
-    featured: index < 3,
-    order: index + 1,
-    isDemo: true,
-  };
 }
 
 function publicVideo(media: TalentMediaRecord): PublicTalentVideo | null {
@@ -161,10 +132,11 @@ export async function getPublicTalents() {
   try {
     const supabase = await createClient();
     const { data, error } = await supabase.from('talents').select(publicColumns).eq('ativo', true).order('ordem', { ascending: true }).order('nome', { ascending: true });
-    if (error || !data || data.length === 0) return { talents: demoTalents.map(demoToPublic), usingFallback: true };
+    if (error) return { talents: [] as PublicTalent[], usingFallback: true };
+    if (!data || data.length === 0) return { talents: [] as PublicTalent[], usingFallback: false };
     return { talents: await resolvePhotoUrls(data as TalentRecord[]), usingFallback: false };
   } catch {
-    return { talents: demoTalents.map(demoToPublic), usingFallback: true };
+    return { talents: [] as PublicTalent[], usingFallback: true };
   }
 }
 

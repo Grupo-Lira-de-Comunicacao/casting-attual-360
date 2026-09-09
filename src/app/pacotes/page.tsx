@@ -11,7 +11,7 @@ export default function PackagesPage() {
         <SectionHeading
           eyebrow="Soluções para marcas"
           title="Da primeira presença à campanha 360°"
-          description="Formatos demonstrativos pensados para empresas, profissionais e projetos culturais do Vale do Paraíba. Cada campanha será adaptada ao objetivo, ao público e ao orçamento do cliente."
+          description="Formatos-base pensados para empresas, profissionais e projetos culturais do Vale do Paraíba. Cada campanha é adaptada ao objetivo, ao público, ao escopo e ao orçamento do cliente."
         />
 
         <div className="grid gap-6 md:grid-cols-3">
@@ -31,7 +31,7 @@ export default function PackagesPage() {
           </Link>
         </section>
 
-        <p className="text-center text-sm text-slate-500">Valores e condições exibidos nesta fase são referências demonstrativas e serão definidos após briefing.</p>
+        <p className="text-center text-sm text-slate-500">Valores e condições são definidos após briefing e validação do escopo da campanha.</p>
       </div>
     </SiteShell>
   );

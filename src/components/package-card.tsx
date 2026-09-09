@@ -16,7 +16,8 @@ export function PackageCard({ pkg }: { pkg: Package }) {
       </ul>
       <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-center">
         <p className="text-sm text-slate-500">Investimento</p>
-        <p className="text-xl font-black text-navy">{pkg.price}</p>
+        <p className="text-xl font-black text-navy">Sob consulta</p>
+        <p className="mt-1 text-xs text-slate-500">Definido após briefing, escopo e seleção de talentos.</p>
       </div>
     </article>
   );
