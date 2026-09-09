@@ -3,6 +3,9 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
+const ADMIN_EMAIL = 'splira@gmail.com';
+const PASSWORD_RESET_REDIRECT = 'https://casting360.grupolira.com/auth/callback?next=/admin/redefinir-senha';
+
 function getSafeNextPath(value: FormDataEntryValue | null) {
   const nextPath = String(value ?? '/admin');
 
@@ -33,4 +36,17 @@ export async function signInAdmin(formData: FormData) {
   }
 
   redirect(nextPath);
+}
+
+export async function requestAdminPasswordReset() {
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(ADMIN_EMAIL, {
+    redirectTo: PASSWORD_RESET_REDIRECT,
+  });
+
+  if (error) {
+    redirect('/admin/login?reset=error');
+  }
+
+  redirect('/admin/login?reset=sent');
 }
