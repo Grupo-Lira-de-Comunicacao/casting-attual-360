@@ -95,6 +95,8 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
             <div className="mt-3 grid gap-2">
               <span>TV Attual • Grupo Lira</span>
               <span>Caçapava • Vale do Paraíba</span>
+              <Link href="/privacidade" className="hover:text-teal">Política de Privacidade</Link>
+              <Link href="/termos" className="hover:text-teal">Termos de Uso</Link>
               <span>© 2026 Todos os direitos reservados.</span>
             </div>
           </div>
