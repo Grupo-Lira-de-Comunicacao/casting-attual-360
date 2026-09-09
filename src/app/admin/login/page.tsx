@@ -1,20 +1,46 @@
 import { redirect } from 'next/navigation';
 import { SiteShell } from '@/components/site-shell';
 import { createClient } from '@/lib/supabase/server';
-import { signInAdmin } from './actions';
+import { requestAdminPasswordReset, signInAdmin } from './actions';
 
 export const dynamic = 'force-dynamic';
+
+const ADMIN_EMAIL = 'splira@gmail.com';
 
 type LoginPageProps = {
   searchParams?: Promise<{
     error?: string;
     next?: string;
+    reset?: string;
   }>;
 };
 
 const errorMessages: Record<string, string> = {
   missing: 'Informe email e senha para acessar a área administrativa.',
   invalid: 'Email ou senha inválidos. Verifique os dados e tente novamente.',
+};
+
+const resetMessages: Record<string, { tone: 'success' | 'error'; text: string }> = {
+  sent: {
+    tone: 'success',
+    text: `Enviamos um link de recuperação para ${ADMIN_EMAIL}. Verifique também a caixa de spam.`,
+  },
+  changed: {
+    tone: 'success',
+    text: 'Senha atualizada com sucesso. Entre novamente usando a nova senha.',
+  },
+  error: {
+    tone: 'error',
+    text: 'Não foi possível enviar o link agora. Aguarde alguns instantes e tente novamente.',
+  },
+  expired: {
+    tone: 'error',
+    text: 'O link de recuperação expirou ou não possui mais uma sessão válida. Solicite um novo link.',
+  },
+  'invalid-link': {
+    tone: 'error',
+    text: 'O link de recuperação é inválido ou já foi utilizado. Solicite um novo link.',
+  },
 };
 
 export default async function AdminLoginPage({ searchParams }: LoginPageProps) {
@@ -27,6 +53,8 @@ export default async function AdminLoginPage({ searchParams }: LoginPageProps) {
   if (user) {
     redirect(params.next?.startsWith('/admin') && !params.next.startsWith('/admin/login') ? params.next : '/admin');
   }
+
+  const resetFeedback = params.reset ? resetMessages[params.reset] : undefined;
 
   return (
     <SiteShell>
@@ -57,6 +85,16 @@ export default async function AdminLoginPage({ searchParams }: LoginPageProps) {
             </p>
           )}
 
+          {resetFeedback && (
+            <p
+              className={`mt-5 rounded-2xl px-4 py-3 text-sm font-semibold ${
+                resetFeedback.tone === 'success' ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-700'
+              }`}
+            >
+              {resetFeedback.text}
+            </p>
+          )}
+
           <form action={signInAdmin} className="mt-6 grid gap-4">
             <input type="hidden" name="next" value={params.next ?? '/admin'} />
             <label className="grid gap-2">
@@ -65,7 +103,8 @@ export default async function AdminLoginPage({ searchParams }: LoginPageProps) {
                 className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-navy caret-blue outline-none placeholder:text-slate-400 transition focus:border-teal focus:ring-2 focus:ring-teal/25"
                 name="email"
                 type="email"
-                placeholder="admin@attual.com.br"
+                defaultValue={ADMIN_EMAIL}
+                autoComplete="username"
                 required
               />
             </label>
@@ -76,6 +115,7 @@ export default async function AdminLoginPage({ searchParams }: LoginPageProps) {
                 name="password"
                 type="password"
                 placeholder="Sua senha"
+                autoComplete="current-password"
                 required
               />
             </label>
@@ -83,6 +123,17 @@ export default async function AdminLoginPage({ searchParams }: LoginPageProps) {
               Acessar painel
             </button>
           </form>
+
+          <div className="mt-5 border-t border-slate-200 pt-5">
+            <form action={requestAdminPasswordReset}>
+              <button className="font-bold text-blue transition hover:text-teal" type="submit">
+                Esqueceu a senha?
+              </button>
+            </form>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              O link de recuperação será enviado para <strong>{ADMIN_EMAIL}</strong>.
+            </p>
+          </div>
         </section>
       </div>
     </SiteShell>
