@@ -59,7 +59,7 @@ export default async function AdminPage() {
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white/70">Painel administrativo</p>
               <h1 className="mt-3 text-3xl font-black">Visão geral do Casting Attual 360</h1>
-              <p className="mt-3 max-w-2xl text-white/80">Acompanhe os talentos cadastrados e acesse rapidamente as áreas disponíveis da plataforma.</p>
+              <p className="mt-3 max-w-2xl text-white/80">Acompanhe talentos, solicitações e integrações da plataforma em um único ambiente.</p>
             </div>
             <form action={signOut}><button className="rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-white/20">Sair</button></form>
           </div>
@@ -116,11 +116,11 @@ export default async function AdminPage() {
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-7 text-navy shadow-soft">
-            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">Próxima fase</p>
+          <div className="rounded-[28px] border border-gold/30 bg-gold/10 p-7 text-navy shadow-soft">
+            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-amber-700">Relacionamento</p>
             <h2 className="mt-3 text-2xl font-black">Solicitações públicas</h2>
-            <p className="mt-3 leading-7 text-slate-600">O módulo de inscrições, análise e aprovação será ativado após a criação e validação da estrutura <code>public.requests</code>.</p>
-            <span className="mt-6 inline-flex rounded-full bg-slate-200 px-4 py-2 text-sm font-bold text-slate-600">Em breve</span>
+            <p className="mt-3 leading-7 text-slate-600">Analise cadastros de talentos e briefings de empresas, atribua responsáveis, acompanhe status e consulte o histórico.</p>
+            <Link href="/admin/solicitacoes" className="mt-6 inline-flex rounded-full bg-navy px-5 py-3 text-sm font-bold text-white transition hover:opacity-90">Abrir solicitações</Link>
           </div>
         </section>
       </div>
