@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { FormEvent, useState } from 'react';
 
 type ContactFormProps = {
@@ -14,6 +15,10 @@ export function ContactForm({ title, description, requestType }: ContactFormProp
 
   const fieldClassName =
     'rounded-2xl border border-slate-300 bg-white px-4 py-3 text-navy caret-blue outline-none placeholder:text-slate-400 transition focus:border-teal focus:ring-2 focus:ring-teal/25';
+
+  function value(formData: FormData, field: string) {
+    return String(formData.get(field) ?? '').trim();
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -31,13 +36,59 @@ export function ContactForm({ title, description, requestType }: ContactFormProp
       return;
     }
 
+    const consent = formData.get('consent') === 'on';
+    if (!consent) {
+      setStatus('error');
+      setMessage('Para enviar, confirme a leitura da Política de Privacidade e autorize o tratamento dos dados informados.');
+      return;
+    }
+
+    const common = {
+      name: value(formData, 'name'),
+      email: value(formData, 'email'),
+      phone: value(formData, 'phone'),
+      city: value(formData, 'city'),
+    };
+
+    const details = requestType === 'talento'
+      ? [
+          `Nome artístico: ${value(formData, 'stage_name') || 'não informado'}`,
+          `WhatsApp/telefone: ${common.phone}`,
+          `Cidade/região: ${common.city}`,
+          `Categoria profissional: ${value(formData, 'category')}`,
+          `Instagram/redes: ${value(formData, 'social') || 'não informado'}`,
+          `Portfólio/link: ${value(formData, 'portfolio') || 'não informado'}`,
+          '',
+          'Apresentação e experiência:',
+          value(formData, 'details'),
+          '',
+          'Consentimento LGPD: confirmado no envio.',
+        ].join('\n')
+      : [
+          `Empresa/marca: ${value(formData, 'organization')}`,
+          `Responsável: ${value(formData, 'responsible') || common.name}`,
+          `WhatsApp/telefone: ${common.phone}`,
+          `Cidade/região: ${common.city}`,
+          `Tipo de produção/campanha: ${value(formData, 'production_type')}`,
+          `Público-alvo: ${value(formData, 'audience') || 'não informado'}`,
+          '',
+          'Briefing / necessidade:',
+          value(formData, 'details'),
+          '',
+          'Consentimento LGPD: confirmado no envio.',
+        ].join('\n');
+
+    const organization = requestType === 'talento'
+      ? `${value(formData, 'category')} • ${common.city}`
+      : value(formData, 'organization');
+
     const payload = {
       request_type: requestType,
-      name: String(formData.get('name') ?? '').trim(),
-      email: String(formData.get('email') ?? '').trim(),
-      organization: String(formData.get('organization') ?? '').trim(),
-      message: String(formData.get('message') ?? '').trim(),
-      is_test: true,
+      name: common.name,
+      email: common.email,
+      organization,
+      message: details,
+      is_test: false,
     };
 
     try {
@@ -58,11 +109,15 @@ export function ContactForm({ title, description, requestType }: ContactFormProp
 
       form.reset();
       setStatus('success');
-      setMessage('Cadastro de teste enviado com sucesso.');
+      setMessage(
+        requestType === 'talento'
+          ? 'Cadastro recebido. Nossa equipe poderá entrar em contato para validação e próximos passos.'
+          : 'Solicitação recebida. Nossa equipe poderá entrar em contato para entender a campanha e indicar os próximos passos.',
+      );
     } catch (error) {
       console.error('Erro ao enviar formulário:', error);
       setStatus('error');
-      setMessage('Não foi possível enviar agora. Verifique a tabela e tente novamente.');
+      setMessage('Não foi possível enviar agora. Tente novamente em instantes.');
     }
   }
 
@@ -75,15 +130,59 @@ export function ContactForm({ title, description, requestType }: ContactFormProp
       </div>
 
       <form className="mt-8 grid gap-4" onSubmit={handleSubmit}>
-        <input className={fieldClassName} name="name" placeholder="Nome" required />
-        <input className={fieldClassName} name="email" type="email" placeholder="Email" required />
-        <input className={fieldClassName} name="organization" placeholder="Empresa ou talento" required />
-        <textarea className={`min-h-28 ${fieldClassName}`} name="message" placeholder="Conteúdo da mensagem" required />
+        <div className="grid gap-4 md:grid-cols-2">
+          <input className={fieldClassName} name="name" placeholder={requestType === 'talento' ? 'Nome completo' : 'Seu nome'} required maxLength={120} />
+          <input className={fieldClassName} name="email" type="email" placeholder="E-mail" required maxLength={180} />
+          <input className={fieldClassName} name="phone" type="tel" placeholder="WhatsApp / telefone" required maxLength={40} />
+          <input className={fieldClassName} name="city" placeholder="Cidade / região" required maxLength={120} />
+        </div>
+
+        {requestType === 'talento' ? (
+          <>
+            <div className="grid gap-4 md:grid-cols-2">
+              <input className={fieldClassName} name="stage_name" placeholder="Nome artístico (opcional)" maxLength={120} />
+              <input className={fieldClassName} name="category" placeholder="Categoria profissional" required maxLength={120} />
+              <input className={fieldClassName} name="social" placeholder="Instagram / redes sociais" maxLength={240} />
+              <input className={fieldClassName} name="portfolio" type="url" placeholder="Link de portfólio (opcional)" maxLength={500} />
+            </div>
+            <textarea
+              className={`min-h-36 ${fieldClassName}`}
+              name="details"
+              placeholder="Conte sua experiência, principais trabalhos, habilidades, disponibilidade e o que deseja desenvolver no Casting 360."
+              required
+              maxLength={2200}
+            />
+          </>
+        ) : (
+          <>
+            <div className="grid gap-4 md:grid-cols-2">
+              <input className={fieldClassName} name="organization" placeholder="Empresa / marca" required maxLength={180} />
+              <input className={fieldClassName} name="responsible" placeholder="Responsável pelo projeto" maxLength={120} />
+              <input className={fieldClassName} name="production_type" placeholder="Tipo de produção / campanha" required maxLength={180} />
+              <input className={fieldClassName} name="audience" placeholder="Público-alvo (opcional)" maxLength={240} />
+            </div>
+            <textarea
+              className={`min-h-36 ${fieldClassName}`}
+              name="details"
+              placeholder="Descreva a campanha, perfil de talento procurado, quantidade, datas, local, canais de divulgação e demais informações relevantes."
+              required
+              maxLength={2200}
+            />
+          </>
+        )}
+
+        <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+          <input name="consent" type="checkbox" required className="mt-1 h-4 w-4 shrink-0 accent-[#19c7c5]" />
+          <span>
+            Li e concordo com a <Link href="/privacidade" className="font-bold text-blue hover:underline">Política de Privacidade</Link> e autorizo o tratamento dos dados enviados para análise, contato e gestão desta solicitação, nos termos da LGPD.
+          </span>
+        </label>
+
         <button
           className="rounded-full bg-navy px-6 py-3 font-semibold text-white transition hover:bg-blue disabled:cursor-not-allowed disabled:opacity-60"
           disabled={status === 'sending'}
         >
-          {status === 'sending' ? 'Enviando...' : 'Enviar'}
+          {status === 'sending' ? 'Enviando...' : requestType === 'talento' ? 'Enviar cadastro' : 'Enviar briefing'}
         </button>
 
         {message && (
@@ -97,7 +196,9 @@ export function ContactForm({ title, description, requestType }: ContactFormProp
           </p>
         )}
 
-        <p className="text-xs text-slate-500">Ambiente de validação: os registros enviados nesta fase são identificados como testes.</p>
+        <p className="text-xs text-slate-500">
+          Os dados são usados exclusivamente para operar o Casting Attual 360 e atender esta solicitação. Consulte também nossos <Link href="/termos" className="font-semibold text-blue hover:underline">Termos de Uso</Link>.
+        </p>
       </form>
     </section>
   );
