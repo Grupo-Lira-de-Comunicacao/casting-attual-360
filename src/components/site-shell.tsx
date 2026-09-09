@@ -97,6 +97,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
               <span>Caçapava • Vale do Paraíba</span>
               <Link href="/privacidade" className="hover:text-teal">Política de Privacidade</Link>
               <Link href="/termos" className="hover:text-teal">Termos de Uso</Link>
+              <Link href="/admin" className="hover:text-teal">Admin</Link>
               <span>© 2026 Todos os direitos reservados.</span>
             </div>
           </div>
