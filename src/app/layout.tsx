@@ -10,13 +10,9 @@ export const metadata: Metadata = {
   },
   description:
     'Casting Attual 360 conecta marcas, talentos, audiovisual e mídia regional com curadoria estratégica no Vale do Paraíba.',
-  alternates: {
-    canonical: '/',
-  },
   openGraph: {
     type: 'website',
     locale: 'pt_BR',
-    url: '/',
     siteName: 'Casting Attual 360',
     title: 'Casting Attual 360 | Talentos, campanhas e mídia regional',
     description:
