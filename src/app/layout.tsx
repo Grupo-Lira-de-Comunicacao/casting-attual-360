@@ -2,8 +2,36 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Casting Attual 360',
-  description: 'Casting Attual 360 — talentos, conexões e visibilidade para marcas que querem ampliar sua voz, imagem e alcance.',
+  metadataBase: new URL('https://casting360.grupolira.com'),
+  applicationName: 'Casting Attual 360',
+  title: {
+    default: 'Casting Attual 360 | Talentos, campanhas e mídia regional',
+    template: '%s | Casting Attual 360',
+  },
+  description:
+    'Casting Attual 360 conecta marcas, talentos, audiovisual e mídia regional com curadoria estratégica no Vale do Paraíba.',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'pt_BR',
+    url: '/',
+    siteName: 'Casting Attual 360',
+    title: 'Casting Attual 360 | Talentos, campanhas e mídia regional',
+    description:
+      'Curadoria estratégica para conectar marcas a talentos, audiovisual e presença regional no Vale do Paraíba.',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Casting Attual 360',
+    description:
+      'Talentos, campanhas, audiovisual e mídia regional com curadoria estratégica.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
