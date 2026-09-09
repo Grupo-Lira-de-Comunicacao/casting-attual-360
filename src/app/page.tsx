@@ -13,6 +13,13 @@ const benefits = [
   { title: 'Resultados', text: 'Presença regional que amplia o alcance.', icon: 'signal' as const },
 ];
 
+const journey = [
+  { number: '01', title: 'Briefing ou cadastro', text: 'A empresa conta o projeto ou o talento apresenta seu perfil profissional.' },
+  { number: '02', title: 'Curadoria', text: 'Organizamos as informações e avaliamos aderência, formato, região e objetivo.' },
+  { number: '03', title: 'Seleção e alinhamento', text: 'As possibilidades mais compatíveis seguem para validação de escopo e disponibilidade.' },
+  { number: '04', title: 'Campanha e acompanhamento', text: 'A conexão evolui com clareza de papéis, produção e presença regional.' },
+];
+
 const pillars = ['Foco regional', 'Parcerias reais', 'Diversidade', 'Visibilidade 360°', 'Segurança e ética'];
 
 export default async function HomePage() {
@@ -41,7 +48,38 @@ export default async function HomePage() {
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{benefits.map((item) => <article key={item.title} className="group rounded-[26px] border border-white/10 bg-white/[.035] p-6 transition hover:-translate-y-1 hover:border-teal/40 hover:bg-teal/[.06]"><span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue/30 to-teal/20 text-teal"><MediaGlyph type={item.icon} /></span><h3 className="mt-6 text-2xl font-black">{item.title}</h3><p className="mt-3 leading-7 text-slate-400">{item.text}</p></article>)}</div>
       </section>
 
-      <section className="relative overflow-hidden rounded-[34px] border border-white/10 bg-gradient-to-br from-[#092746] to-[#041628] p-7 sm:p-10 lg:p-14">
+      <section className="rounded-[34px] border border-white/10 bg-white/[.03] p-7 sm:p-10 lg:p-14" aria-labelledby="como-funciona">
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="text-sm font-bold uppercase tracking-[.28em] text-gold">Como funciona</p>
+          <h2 id="como-funciona" className="mt-4 text-3xl font-black sm:text-5xl">Uma jornada clara dos dois lados.</h2>
+          <p className="mt-4 text-lg leading-8 text-slate-400">O Casting Attual 360 organiza a entrada de empresas e talentos para que cada oportunidade comece com contexto, curadoria e alinhamento.</p>
+        </div>
+        <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {journey.map((step) => (
+            <article key={step.number} className="rounded-[24px] border border-white/10 bg-[#061b31] p-6">
+              <span className="text-sm font-black tracking-[.22em] text-teal">{step.number}</span>
+              <h3 className="mt-4 text-xl font-black text-white">{step.title}</h3>
+              <p className="mt-3 leading-7 text-slate-400">{step.text}</p>
+            </article>
+          ))}
+        </div>
+        <div className="mt-8 grid gap-4 md:grid-cols-2">
+          <div className="rounded-[26px] border border-blue/25 bg-blue/[.08] p-6 sm:p-8">
+            <p className="text-sm font-bold uppercase tracking-[.22em] text-teal">Para empresas</p>
+            <h3 className="mt-3 text-2xl font-black text-white">Traga o briefing. A curadoria começa daqui.</h3>
+            <p className="mt-3 leading-7 text-slate-300">Informe objetivo, cidade, período, público, formato e o tipo de presença desejada para a campanha.</p>
+            <Link href="/empresas" className="mt-5 inline-flex font-bold text-teal">Solicitar curadoria →</Link>
+          </div>
+          <div className="rounded-[26px] border border-gold/25 bg-gold/[.08] p-6 sm:p-8">
+            <p className="text-sm font-bold uppercase tracking-[.22em] text-gold">Para talentos</p>
+            <h3 className="mt-3 text-2xl font-black text-white">Apresente seu perfil para avaliação.</h3>
+            <p className="mt-3 leading-7 text-slate-300">Experiência, categoria, cidade, redes e portfólio ajudam a equipe a entender onde seu trabalho pode fazer sentido.</p>
+            <Link href="/talentos/cadastrar" className="mt-5 inline-flex font-bold text-gold">Enviar cadastro →</Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="relative mt-20 overflow-hidden rounded-[34px] border border-white/10 bg-gradient-to-br from-[#092746] to-[#041628] p-7 sm:p-10 lg:p-14">
         <div className="absolute right-0 top-0 h-72 w-72 rounded-full bg-blue/15 blur-3xl" />
         <div className="relative grid gap-12 lg:grid-cols-[.75fr_1.25fr] lg:items-center"><div><p className="text-sm font-bold uppercase tracking-[.28em] text-gold">Rede de valor</p><h2 className="mt-4 text-3xl font-black sm:text-5xl">Um ecossistema que gera valor</h2><p className="mt-5 text-lg leading-8 text-slate-300">Estratégia no centro, conectando oportunidades às pessoas certas.</p></div><div className="grid items-center gap-4 md:grid-cols-[1fr_auto_1.15fr_auto_1fr]"><div className="rounded-2xl border border-blue/30 bg-blue/10 p-5 text-center"><MediaGlyph type="signal" /><p className="mt-3 font-black">Empresas</p><p className="mt-1 text-sm text-slate-400">Briefing e objetivos</p></div><span className="rotate-90 text-2xl text-teal md:rotate-0">→</span><div className="rounded-2xl border border-teal/50 bg-teal/10 p-6 text-center shadow-[0_0_45px_-20px_#19c7c5]"><p className="font-black text-teal">CASTING ATTUAL 360</p><p className="mt-2 text-sm text-slate-300">Curadoria + estratégia</p></div><span className="rotate-90 text-2xl text-gold md:rotate-0">→</span><div className="rounded-2xl border border-gold/30 bg-gold/10 p-5 text-center"><MediaGlyph type="people" /><p className="mt-3 font-black">Talentos e mídia</p><p className="mt-1 text-sm text-slate-400">Presença e alcance</p></div></div></div>
         <div className="relative mt-10 flex flex-wrap gap-3 border-t border-white/10 pt-8">{pillars.map((pillar, index) => <span key={pillar} className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200"><span className={index % 2 ? 'text-gold' : 'text-teal'}>✓</span> {pillar}</span>)}</div>
