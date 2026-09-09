@@ -59,5 +59,6 @@ export async function updateRequestAdminFields(
   if (error) return { ok: false, error: 'Não foi possível salvar as alterações.' };
 
   revalidatePath('/admin');
+  revalidatePath('/admin/solicitacoes');
   return { ok: true, request: data as RequestRecord };
 }
