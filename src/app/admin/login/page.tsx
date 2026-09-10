@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation';
 import { SiteShell } from '@/components/site-shell';
 import { createClient } from '@/lib/supabase/server';
-import { requestAdminPasswordReset, signInAdmin } from './actions';
+import { signInAdmin } from './actions';
+import { ResetPasswordButton } from './reset-password-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -125,11 +126,7 @@ export default async function AdminLoginPage({ searchParams }: LoginPageProps) {
           </form>
 
           <div className="mt-5 border-t border-slate-200 pt-5">
-            <form action={requestAdminPasswordReset}>
-              <button className="font-bold text-blue transition hover:text-teal" type="submit">
-                Esqueceu a senha?
-              </button>
-            </form>
+            <ResetPasswordButton />
             <p className="mt-2 text-sm leading-6 text-slate-500">
               O link de recuperação será enviado para <strong>{ADMIN_EMAIL}</strong>.
             </p>
